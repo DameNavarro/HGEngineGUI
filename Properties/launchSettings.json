@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "HGEngineGUI (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "HGEngineGUI (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

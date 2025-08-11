@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="HGEngineGUI.Pages.StartPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+    <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" Padding="24">
+        <StackPanel Orientation="Horizontal" Spacing="12">
+            <TextBlock Text="HG Engine project folder:" VerticalAlignment="Center"/>
+            <TextBlock x:Name="RootPathText" Text="(not selected)" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <Button x:Name="PickFolderButton" Click="OnPickFolderClick" Content="Browse..."/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Margin="0,16,0,0" Spacing="6">
+            <TextBlock Text="Quick Stats" FontWeight="SemiBold"/>
+            <TextBlock x:Name="SpeciesCountText" Text="Species: -"/>
+        </StackPanel>
+
+        <Border Grid.Row="2" Margin="0,16,0,0" Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+            <TextBlock Text="Use the navigation bar to open editors once a project is selected."/>
+        </Border>
+
+        <TextBlock Grid.Row="3" Foreground="Gray" Margin="0,16,0,0" Text="This is a work-in-progress build. Read-only parsing is enabled for Species constants."/>
+
+        <Expander Grid.Row="4" Header="Recent changes" Margin="0,16,0,0">
+            <ListView ItemsSource="{x:Bind changes, Mode=OneWay}" x:Name="ChangesList" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollMode="Enabled">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <TextBlock Text="{Binding FilePath}" Width="500"/>
+                            <TextBlock Text="{Binding When}" Width="200"/>
+                            <TextBlock Text="{Binding SizeBytes}" Width="100"/>
+                            <Button Content="Open" Click="OnOpenChangeClick"/>
+                            <Button Content="Restore" Click="OnRestoreChangeClick"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Expander>
+    </Grid>
+</Page>
+
+

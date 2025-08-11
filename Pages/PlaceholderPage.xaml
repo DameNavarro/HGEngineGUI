@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="HGEngineGUI.Pages.PlaceholderPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Padding="24">
+        <StackPanel Spacing="12">
+            <TextBlock x:Name="TitleText" FontSize="20"/>
+            <ListView x:Name="List"/>
+        </StackPanel>
+    </Grid>
+</Page>
+
+
