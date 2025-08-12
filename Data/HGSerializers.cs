@@ -10,6 +10,7 @@ namespace HGEngineGUI.Data
 {
     public static class HGSerializers
     {
+        private static string EscapeQuotes(string s) => s.Replace("\"", "\\\"");
         // Basic diff preview utility
         public static string ComputeUnifiedDiff(string original, string updated, string header = "changes")
         {
@@ -189,6 +190,34 @@ namespace HGEngineGUI.Data
             return ComputeUnifiedDiff(lines, updated, "tutordata.txt");
         }
 
+        // Hidden Ability table (data/HiddenAbilityTable.c)
+        public static async Task<string> PreviewHiddenAbilityAsync(string speciesMacro, string abilityMacro)
+        {
+            if (ProjectContext.RootPath == null || string.IsNullOrWhiteSpace(abilityMacro)) return string.Empty;
+            var path = Path.Combine(ProjectContext.RootPath, "data", "HiddenAbilityTable.c");
+            if (!File.Exists(path)) return string.Empty;
+            var original = await File.ReadAllTextAsync(path);
+            var pattern = new Regex(@"(\[\s*" + Regex.Escape(speciesMacro) + @"\s*\]\s*=\s*)(ABILITY_[A-Z0-9_]+)(\s*,)", RegexOptions.Multiline);
+            if (!pattern.IsMatch(original)) return string.Empty;
+            var updated = pattern.Replace(original, m => m.Groups[1].Value + abilityMacro + m.Groups[3].Value, 1);
+            return ComputeUnifiedDiff(original, updated, "HiddenAbilityTable.c");
+        }
+
+        public static async Task SaveHiddenAbilityAsync(string speciesMacro, string abilityMacro)
+        {
+            if (ProjectContext.RootPath == null || string.IsNullOrWhiteSpace(abilityMacro)) return;
+            var path = Path.Combine(ProjectContext.RootPath, "data", "HiddenAbilityTable.c");
+            if (!File.Exists(path)) return;
+            var text = await File.ReadAllTextAsync(path);
+            var pattern = new Regex(@"(\[\s*" + Regex.Escape(speciesMacro) + @"\s*\]\s*=\s*)(ABILITY_[A-Z0-9_]+)(\s*,)", RegexOptions.Multiline);
+            if (!pattern.IsMatch(text)) return;
+            var updated = pattern.Replace(text, m => m.Groups[1].Value + abilityMacro + m.Groups[3].Value, 1);
+            var backup = path + ".bak";
+            try { File.Copy(path, backup, true); } catch { }
+            await File.WriteAllTextAsync(path, updated);
+            HGEngineGUI.Services.ChangeLog.Record(path, updated.Length);
+        }
+
         // Overview save/preview
         public static async Task SaveOverviewAsync(string speciesMacro, HGParsers.SpeciesOverview ov)
         {
@@ -208,6 +237,7 @@ namespace HGEngineGUI.Data
             sb.AppendLine($"    basestats {ov.BaseHp}, {ov.BaseAttack}, {ov.BaseDefense}, {ov.BaseSpeed}, {ov.BaseSpAttack}, {ov.BaseSpDefense}");
             sb.AppendLine($"    types {ov.Type1}, {ov.Type2}");
             sb.AppendLine($"    catchrate {ov.CatchRate}");
+            // BaseExp is managed in data/BaseExperienceTable.c; do not write in mondata.s
             sb.AppendLine($"    evyields {ov.EvYields.hp}, {ov.EvYields.atk}, {ov.EvYields.def}, {ov.EvYields.spd}, {ov.EvYields.spatk}, {ov.EvYields.spdef}");
             sb.AppendLine($"    items {ov.Item1}, {ov.Item2}");
             sb.AppendLine($"    genderratio {ov.GenderRatio}");
@@ -216,6 +246,12 @@ namespace HGEngineGUI.Data
             sb.AppendLine($"    growthrate {ov.GrowthRate}");
             sb.AppendLine($"    egggroups {ov.EggGroup1}, {ov.EggGroup2}");
             sb.AppendLine($"    abilities {ov.Ability1}, {ov.Ability2}");
+            if (ov.RunChance > 0) sb.AppendLine($"    runchance {ov.RunChance}");
+            // Hidden ability is stored in data/HiddenAbilityTable.c and not in mondata.s
+            if (!string.IsNullOrWhiteSpace(ov.DexClassification)) sb.AppendLine($"    mondexclassification {speciesMacro}, \"\"{EscapeQuotes(ov.DexClassification)}\"\"");
+            if (!string.IsNullOrWhiteSpace(ov.DexEntry)) sb.AppendLine($"    mondexentry {speciesMacro}, \"\"{EscapeQuotes(ov.DexEntry)}\"\"");
+            if (!string.IsNullOrWhiteSpace(ov.DexHeight)) sb.AppendLine($"    mondexheight {speciesMacro}, \"\"{EscapeQuotes(ov.DexHeight)}\"\"");
+            if (!string.IsNullOrWhiteSpace(ov.DexWeight)) sb.AppendLine($"    mondexweight {speciesMacro}, \"\"{EscapeQuotes(ov.DexWeight)}\"\"");
             sb.AppendLine();
 
             var updated = text.Substring(0, startIdx) + sb.ToString() + text.Substring(endIdx);
@@ -241,6 +277,7 @@ namespace HGEngineGUI.Data
             sb.AppendLine($"    basestats {ov.BaseHp}, {ov.BaseAttack}, {ov.BaseDefense}, {ov.BaseSpeed}, {ov.BaseSpAttack}, {ov.BaseSpDefense}");
             sb.AppendLine($"    types {ov.Type1}, {ov.Type2}");
             sb.AppendLine($"    catchrate {ov.CatchRate}");
+            // BaseExp is managed in data/BaseExperienceTable.c; do not write in mondata.s
             sb.AppendLine($"    evyields {ov.EvYields.hp}, {ov.EvYields.atk}, {ov.EvYields.def}, {ov.EvYields.spd}, {ov.EvYields.spatk}, {ov.EvYields.spdef}");
             sb.AppendLine($"    items {ov.Item1}, {ov.Item2}");
             sb.AppendLine($"    genderratio {ov.GenderRatio}");
@@ -249,6 +286,11 @@ namespace HGEngineGUI.Data
             sb.AppendLine($"    growthrate {ov.GrowthRate}");
             sb.AppendLine($"    egggroups {ov.EggGroup1}, {ov.EggGroup2}");
             sb.AppendLine($"    abilities {ov.Ability1}, {ov.Ability2}");
+            if (ov.RunChance > 0) sb.AppendLine($"    runchance {ov.RunChance}");
+            if (!string.IsNullOrWhiteSpace(ov.DexClassification)) sb.AppendLine($"    mondexclassification {speciesMacro}, \"\"{EscapeQuotes(ov.DexClassification)}\"\"");
+            if (!string.IsNullOrWhiteSpace(ov.DexEntry)) sb.AppendLine($"    mondexentry {speciesMacro}, \"\"{EscapeQuotes(ov.DexEntry)}\"\"");
+            if (!string.IsNullOrWhiteSpace(ov.DexHeight)) sb.AppendLine($"    mondexheight {speciesMacro}, \"\"{EscapeQuotes(ov.DexHeight)}\"\"");
+            if (!string.IsNullOrWhiteSpace(ov.DexWeight)) sb.AppendLine($"    mondexweight {speciesMacro}, \"\"{EscapeQuotes(ov.DexWeight)}\"\"");
             sb.AppendLine();
 
             var updated = text.Substring(0, startIdx) + sb.ToString() + text.Substring(endIdx);

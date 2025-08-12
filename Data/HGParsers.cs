@@ -55,6 +55,7 @@ namespace HGEngineGUI.Data
             public string Type1 { get; set; } = string.Empty;
             public string Type2 { get; set; } = string.Empty;
             public int CatchRate { get; set; }
+            public int BaseExp { get; set; }
             public (int hp,int atk,int def,int spd,int spatk,int spdef) EvYields { get; set; }
             public string Item1 { get; set; } = "ITEM_NONE";
             public string Item2 { get; set; } = "ITEM_NONE";
@@ -66,6 +67,12 @@ namespace HGEngineGUI.Data
             public string EggGroup2 { get; set; } = string.Empty;
             public string Ability1 { get; set; } = string.Empty;
             public string Ability2 { get; set; } = string.Empty;
+            public string AbilityHidden { get; set; } = string.Empty;
+            public int RunChance { get; set; }
+            public string DexClassification { get; set; } = string.Empty;
+            public string DexEntry { get; set; } = string.Empty;
+            public string DexHeight { get; set; } = string.Empty; // textual, e.g., 3’03”
+            public string DexWeight { get; set; } = string.Empty; // textual, e.g., 28.7 lbs.
         }
 
         // Trainers parsing (read-only summary)
@@ -338,35 +345,49 @@ namespace HGEngineGUI.Data
                 }
             }
 
-            // types.h
+            // types come from include/battle.h in this codebase
             _typeMacros = new();
-            var typeHeader = Path.Combine(ProjectContext.RootPath, "include", "constants", "types.h");
+            var typeHeader = Path.Combine(ProjectContext.RootPath, "include", "battle.h");
             if (File.Exists(typeHeader))
             {
                 foreach (var line in await File.ReadAllLinesAsync(typeHeader))
                 {
-                    var m = DefineRegex.Match(line);
+                    var m = Regex.Match(line, @"^\s*#define\s+(TYPE_[A-Z0-9_]+)\s+\d+");
                     if (!m.Success) continue;
-                    var name = m.Groups["name"].Value;
-                    if (name.StartsWith("TYPE_", StringComparison.Ordinal)) _typeMacros.Add(name);
+                    var name = m.Groups[1].Value;
+                    if (!_typeMacros.Contains(name)) _typeMacros.Add(name);
                 }
             }
 
-            // abilities.h
+            // Abilities: prefer asm/include/abilities.inc if present; else fallback to include/constants/ability.h
             _abilityMacros = new();
-            var abilityHeader = Path.Combine(ProjectContext.RootPath, "include", "constants", "abilities.h");
-            if (File.Exists(abilityHeader))
+            var abilitiesInc = Path.Combine(ProjectContext.RootPath, "asm", "include", "abilities.inc");
+            if (File.Exists(abilitiesInc))
             {
-                foreach (var line in await File.ReadAllLinesAsync(abilityHeader))
+                foreach (var line in await File.ReadAllLinesAsync(abilitiesInc))
                 {
-                    var m = DefineRegex.Match(line);
+                    var m = Regex.Match(line, @"^\s*\.equ\s+(ABILITY_[A-Z0-9_]+)\s*,\s*\d+");
                     if (!m.Success) continue;
-                    var name = m.Groups["name"].Value;
-                    if (name.StartsWith("ABILITY_", StringComparison.Ordinal)) _abilityMacros.Add(name);
+                    var name = m.Groups[1].Value;
+                    if (!_abilityMacros.Contains(name)) _abilityMacros.Add(name);
+                }
+            }
+            else
+            {
+                var abilityHeader = Path.Combine(ProjectContext.RootPath, "include", "constants", "ability.h");
+                if (File.Exists(abilityHeader))
+                {
+                    foreach (var line in await File.ReadAllLinesAsync(abilityHeader))
+                    {
+                        var m = DefineRegex.Match(line);
+                        if (!m.Success) continue;
+                        var name = m.Groups["name"].Value;
+                        if (name.StartsWith("ABILITY_", StringComparison.Ordinal)) _abilityMacros.Add(name);
+                    }
                 }
             }
 
-            // egg_groups.h
+            // egg groups: may not exist; fallback to common set if header is missing
             _eggGroupMacros = new();
             var eggHeader = Path.Combine(ProjectContext.RootPath, "include", "constants", "egg_groups.h");
             if (File.Exists(eggHeader))
@@ -379,19 +400,43 @@ namespace HGEngineGUI.Data
                     if (name.StartsWith("EGG_GROUP_", StringComparison.Ordinal)) _eggGroupMacros.Add(name);
                 }
             }
-
-            // growth.h or growthrates.h
-            _growthRateMacros = new();
-            var growthHeader = Path.Combine(ProjectContext.RootPath, "include", "constants", "growth.h");
-            if (!File.Exists(growthHeader)) growthHeader = Path.Combine(ProjectContext.RootPath, "include", "constants", "growthrates.h");
-            if (File.Exists(growthHeader))
+            else
             {
-                foreach (var line in await File.ReadAllLinesAsync(growthHeader))
+                _eggGroupMacros.AddRange(new[]{
+                    "EGG_GROUP_NONE","EGG_GROUP_MONSTER","EGG_GROUP_WATER_1","EGG_GROUP_BUG","EGG_GROUP_FLYING",
+                    "EGG_GROUP_FIELD","EGG_GROUP_FAIRY","EGG_GROUP_GRASS","EGG_GROUP_HUMAN_LIKE","EGG_GROUP_WATER_3",
+                    "EGG_GROUP_MINERAL","EGG_GROUP_AMORPHOUS","EGG_GROUP_WATER_2","EGG_GROUP_DITTO","EGG_GROUP_DRAGON",
+                    "EGG_GROUP_UNDISCOVERED"
+                });
+            }
+
+            // Growth rate macros: in this codebase under armips/include/constants.s
+            _growthRateMacros = new();
+            var growthAsm = Path.Combine(ProjectContext.RootPath, "armips", "include", "constants.s");
+            if (File.Exists(growthAsm))
+            {
+                foreach (var line in await File.ReadAllLinesAsync(growthAsm))
                 {
-                    var m = DefineRegex.Match(line);
+                    var m = Regex.Match(line, @"^\s*\.equ\s+(GROWTH_[A-Z0-9_]+)\s*,");
                     if (!m.Success) continue;
-                    var name = m.Groups["name"].Value;
-                    if (name.StartsWith("GROWTH_", StringComparison.Ordinal)) _growthRateMacros.Add(name);
+                    var name = m.Groups[1].Value;
+                    if (!_growthRateMacros.Contains(name)) _growthRateMacros.Add(name);
+                }
+            }
+            if (_growthRateMacros.Count == 0)
+            {
+                // Fallback to constants header if present
+                var growthHeader = Path.Combine(ProjectContext.RootPath, "include", "constants", "growth.h");
+                if (!File.Exists(growthHeader)) growthHeader = Path.Combine(ProjectContext.RootPath, "include", "constants", "growthrates.h");
+                if (File.Exists(growthHeader))
+                {
+                    foreach (var line in await File.ReadAllLinesAsync(growthHeader))
+                    {
+                        var m = DefineRegex.Match(line);
+                        if (!m.Success) continue;
+                        var name = m.Groups["name"].Value;
+                        if (name.StartsWith("GROWTH_", StringComparison.Ordinal)) _growthRateMacros.Add(name);
+                    }
                 }
             }
 
@@ -494,6 +539,12 @@ namespace HGEngineGUI.Data
             _eggMoves = new();
             Overview = null;
             if (ProjectContext.RootPath == null) return;
+
+            // Ensure macro caches exist for dropdowns
+            if (_abilityMacros.Count == 0 || _typeMacros.Count == 0 || _eggGroupMacros.Count == 0 || _growthRateMacros.Count == 0)
+            {
+                await RefreshCachesAsync();
+            }
 
             // 1) Level-up moves from armips/data/levelupdata.s
             var levelupPath = PathLevelUp ?? Path.Combine(ProjectContext.RootPath, "armips", "data", "levelupdata.s");
@@ -602,6 +653,8 @@ namespace HGEngineGUI.Data
                     }
                     var catchrate = Regex.Match(block, @"catchrate\s+(?<v>\d+)");
                     if (catchrate.Success) ov.CatchRate = int.Parse(catchrate.Groups["v"].Value);
+                    var baseexp = Regex.Match(block, @"baseexp\s+(?<v>\d+)");
+                    if (baseexp.Success) ov.BaseExp = int.Parse(baseexp.Groups["v"].Value);
                     var ev = Regex.Match(block, @"evyields\s+(?<hp>\d+),\s*(?<atk>\d+),\s*(?<def>\d+),\s*(?<spd>\d+),\s*(?<satk>\d+),\s*(?<sdef>\d+)");
                     if (ev.Success)
                         ov.EvYields = (
@@ -637,14 +690,62 @@ namespace HGEngineGUI.Data
                         ov.Ability1 = abilities.Groups["a1"].Value;
                         ov.Ability2 = abilities.Groups["a2"].Value;
                     }
+                    // Hidden ability from data/HiddenAbilityTable.c
+                    try
+                    {
+                        var hatPath = Path.Combine(ProjectContext.RootPath, "data", "HiddenAbilityTable.c");
+                        if (File.Exists(hatPath))
+                        {
+                            var hat = await File.ReadAllTextAsync(hatPath);
+                            var pattern = new Regex(@"\[\s*" + Regex.Escape(speciesMacro) + @"\s*\]\s*=\s*(?<ab>ABILITY_[A-Z0-9_]+)", RegexOptions.Multiline);
+                            var mm = pattern.Match(hat);
+                            if (mm.Success) ov.AbilityHidden = mm.Groups["ab"].Value;
+                        }
+                    }
+                    catch { }
+                    var runChance = Regex.Match(block, @"runchance\s+(?<v>\d+)");
+                    if (runChance.Success) ov.RunChance = int.Parse(runChance.Groups["v"].Value);
+                    var dexClass = Regex.Match(block, @"mondexclassification\s+[^,]+,\s*""(?<v>[\s\S]*?)""\s*$", RegexOptions.Multiline);
+                    if (dexClass.Success) ov.DexClassification = dexClass.Groups["v"].Value;
+                    var dexEntry = Regex.Match(block, @"mondexentry\s+[^,]+,\s*""(?<v>[\s\S]*?)""\s*$", RegexOptions.Multiline);
+                    if (dexEntry.Success) ov.DexEntry = dexEntry.Groups["v"].Value;
+                    var dexHeight = Regex.Match(block, @"mondexheight\s+[^,]+,\s*""(?<v>[\s\S]*?)""\s*$", RegexOptions.Multiline);
+                    if (dexHeight.Success) ov.DexHeight = dexHeight.Groups["v"].Value;
+                    var dexWeight = Regex.Match(block, @"mondexweight\s+[^,]+,\s*""(?<v>[\s\S]*?)""\s*$", RegexOptions.Multiline);
+                    if (dexWeight.Success) ov.DexWeight = dexWeight.Groups["v"].Value;
 
                     Overview = ov;
                 }
             }
 
+            // Always pull BaseExp from BaseExperienceTable.c for display (mondata baseexp is ignored)
+            try
+            {
+                if (Overview != null && ProjectContext.RootPath != null)
+                {
+                    var baseExpPath = Path.Combine(ProjectContext.RootPath, "data", "BaseExperienceTable.c");
+                    if (File.Exists(baseExpPath))
+                    {
+                        var lines = await File.ReadAllLinesAsync(baseExpPath);
+                        var pattern = new Regex(@"\[" + Regex.Escape(speciesMacro) + @"\]\s*=\s*(?<v>\d+)");
+                        foreach (var line in lines)
+                        {
+                            var m = pattern.Match(line);
+                            if (m.Success)
+                            {
+                                Overview.BaseExp = int.Parse(m.Groups["v"].Value);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+
             // 4) TM/HM headers list for display (needed for the TM/HM tab)
             _tmhmMoves = new();
-            var tmHeadersPath = Path.Combine(ProjectContext.RootPath, "armips", "data", "tmlearnset.txt");
+            if (ProjectContext.RootPath == null) return;
+            var tmHeadersPath = Path.Combine(ProjectContext.RootPath!, "armips", "data", "tmlearnset.txt");
             if (File.Exists(tmHeadersPath))
             {
                 var content = await File.ReadAllTextAsync(tmHeadersPath);

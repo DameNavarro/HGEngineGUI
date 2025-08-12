@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Page x:ConnectionId='1'
     x:Class="HGEngineGUI.Pages.SpeciesDetailPage"
+    x:Name="SpeciesPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -13,10 +14,10 @@
     </Page.KeyboardAccelerators>
     <Grid Padding="16" RowDefinitions="Auto,*">
         <StackPanel Orientation="Horizontal" Spacing="12">
-            <Image x:ConnectionId='71' x:Name="Icon" Width="64" Height="64"/>
+            <Image x:ConnectionId='79' x:Name="Icon" Width="64" Height="64"/>
             <StackPanel>
-                <TextBlock x:ConnectionId='72' x:Name="Title" FontSize="22" FontWeight="SemiBold"/>
-                <TextBlock x:ConnectionId='73' x:Name="Subtitle" Foreground="Gray"/>
+                <TextBlock x:ConnectionId='80' x:Name="Title" FontSize="22" FontWeight="SemiBold"/>
+                <TextBlock x:ConnectionId='81' x:Name="Subtitle" Foreground="Gray"/>
             </StackPanel>
         </StackPanel>
 
@@ -25,64 +26,85 @@
                 <ScrollViewer>
                     <StackPanel Padding="8" Spacing="10">
                         <CommandBar>
-                            <AppBarButton x:ConnectionId='69' Icon="Save" Label="Save"                       />
-                            <AppBarButton x:ConnectionId='70' Icon="Page" Label="Preview"                          />
+                            <AppBarButton x:ConnectionId='77' Icon="Save" Label="Save"                       />
+                            <AppBarButton x:ConnectionId='78' Icon="Page" Label="Preview"                          />
                         </CommandBar>
-                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
                             <TextBlock Text="Types" Grid.Row="0"/>
                             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <ComboBox x:ConnectionId='67' x:Name="Type1Box"                                                                Width="180"/>
-                                <ComboBox x:ConnectionId='68' x:Name="Type2Box"                                                                Width="180"/>
+                                <ComboBox x:ConnectionId='75' x:Name="Type1Box"                                                                Width="180"/>
+                                <ComboBox x:ConnectionId='76' x:Name="Type2Box"                                                                Width="180"/>
                             </StackPanel>
 
                             <TextBlock Text="Base Stats" Grid.Row="1"/>
                             <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                                <TextBox x:ConnectionId='61' x:Name="HpBox" Header="HP" Width="80"/>
-                                <TextBox x:ConnectionId='62' x:Name="AtkBox" Header="Atk" Width="80"/>
-                                <TextBox x:ConnectionId='63' x:Name="DefBox" Header="Def" Width="80"/>
-                                <TextBox x:ConnectionId='64' x:Name="SpABox" Header="SpA" Width="80"/>
-                                <TextBox x:ConnectionId='65' x:Name="SpDBox" Header="SpD" Width="80"/>
-                                <TextBox x:ConnectionId='66' x:Name="SpeBox" Header="Spe" Width="80"/>
+                                <TextBox x:ConnectionId='69' x:Name="HpBox" Header="HP" Width="80"/>
+                                <TextBox x:ConnectionId='70' x:Name="AtkBox" Header="Atk" Width="80"/>
+                                <TextBox x:ConnectionId='71' x:Name="DefBox" Header="Def" Width="80"/>
+                                <TextBox x:ConnectionId='72' x:Name="SpABox" Header="SpA" Width="80"/>
+                                <TextBox x:ConnectionId='73' x:Name="SpDBox" Header="SpD" Width="80"/>
+                                <TextBox x:ConnectionId='74' x:Name="SpeBox" Header="Spe" Width="80"/>
                             </StackPanel>
 
                             <TextBlock Text="EV Yields" Grid.Row="2"/>
                             <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                                <TextBox x:ConnectionId='55' x:Name="EvHpBox" Header="HP" Width="80"/>
-                                <TextBox x:ConnectionId='56' x:Name="EvAtkBox" Header="Atk" Width="80"/>
-                                <TextBox x:ConnectionId='57' x:Name="EvDefBox" Header="Def" Width="80"/>
-                                <TextBox x:ConnectionId='58' x:Name="EvSpABox" Header="SpA" Width="80"/>
-                                <TextBox x:ConnectionId='59' x:Name="EvSpDBox" Header="SpD" Width="80"/>
-                                <TextBox x:ConnectionId='60' x:Name="EvSpeBox" Header="Spe" Width="80"/>
+                                <TextBox x:ConnectionId='63' x:Name="EvHpBox" Header="HP" Width="80"/>
+                                <TextBox x:ConnectionId='64' x:Name="EvAtkBox" Header="Atk" Width="80"/>
+                                <TextBox x:ConnectionId='65' x:Name="EvDefBox" Header="Def" Width="80"/>
+                                <TextBox x:ConnectionId='66' x:Name="EvSpABox" Header="SpA" Width="80"/>
+                                <TextBox x:ConnectionId='67' x:Name="EvSpDBox" Header="SpD" Width="80"/>
+                                <TextBox x:ConnectionId='68' x:Name="EvSpeBox" Header="Spe" Width="80"/>
                             </StackPanel>
 
                             <TextBlock Text="Abilities" Grid.Row="3"/>
                             <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <ComboBox x:ConnectionId='53' x:Name="Ability1Box"                                                                   Width="220"/>
-                                <ComboBox x:ConnectionId='54' x:Name="Ability2Box"                                                                   Width="220"/>
+                                <ComboBox x:ConnectionId='61' x:Name="Ability1Box" Width="220"/>
+                                <ComboBox x:ConnectionId='62' x:Name="Ability2Box" Width="220"/>
                             </StackPanel>
-
-                            <TextBlock Text="Egg Groups" Grid.Row="4"/>
+                            <TextBlock Text="Hidden Ability" Grid.Row="4"/>
                             <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <ComboBox x:ConnectionId='51' x:Name="Egg1Box"                                                                    Width="220"/>
-                                <ComboBox x:ConnectionId='52' x:Name="Egg2Box"                                                                    Width="220"/>
+                                <ComboBox x:ConnectionId='59' x:Name="AbilityHiddenBox" Width="220"/>
+                                <Button x:ConnectionId='60' x:Name="PreviewHiddenAbilityBtn" Content="Preview"                               />
                             </StackPanel>
 
-                            <TextBlock Text="Growth Rate" Grid.Row="5"/>
-                            <ComboBox x:ConnectionId='44' x:Name="GrowthBox" Grid.Row="5" Grid.Column="1"                                                                      Width="220"/>
-
-                            <TextBlock Text="Gender/Catch/Egg cycles/Friendship" Grid.Row="6"/>
-                            <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                                <TextBox x:ConnectionId='47' x:Name="GenderBox" Header="GenderRatio" Width="120"/>
-                                <TextBox x:ConnectionId='48' x:Name="CatchBox" Header="CatchRate" Width="120"/>
-                                <TextBox x:ConnectionId='49' x:Name="EggCyclesBox" Header="EggCycles" Width="120"/>
-                                <TextBox x:ConnectionId='50' x:Name="FriendBox" Header="Friendship" Width="120"/>
+                            <TextBlock Text="Egg Groups" Grid.Row="5"/>
+                            <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                <ComboBox x:ConnectionId='57' x:Name="Egg1Box"                                                                    Width="220"/>
+                                <ComboBox x:ConnectionId='58' x:Name="Egg2Box"                                                                    Width="220"/>
                             </StackPanel>
 
-                            <TextBlock Text="Held Items" Grid.Row="7"/>
-                            <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <ComboBox x:ConnectionId='45' x:Name="Item1Box"                                                                Width="220"/>
-                                <ComboBox x:ConnectionId='46' x:Name="Item2Box"                                                                Width="220"/>
+                            <TextBlock Text="Growth Rate" Grid.Row="6"/>
+                            <ComboBox x:ConnectionId='44' x:Name="GrowthBox" Grid.Row="6" Grid.Column="1"                                                                      Width="220"/>
+
+                            <TextBlock Text="Gender/Catch/BaseExp/Egg cycles/Friendship" Grid.Row="7"/>
+                            <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                                <TextBox x:ConnectionId='52' x:Name="GenderBox" Header="GenderRatio" Width="120"/>
+                                <TextBox x:ConnectionId='53' x:Name="CatchBox" Header="CatchRate" Width="120"/>
+                                <TextBox x:ConnectionId='54' x:Name="BaseExpBox" Header="BaseExp" Width="120"/>
+                                <TextBox x:ConnectionId='55' x:Name="EggCyclesBox" Header="EggCycles" Width="120"/>
+                                <TextBox x:ConnectionId='56' x:Name="FriendBox" Header="Friendship" Width="120"/>
                             </StackPanel>
+
+                            <TextBlock Text="Held Items" Grid.Row="8"/>
+                            <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                <ComboBox x:ConnectionId='50' x:Name="Item1Box"                                                                Width="220"/>
+                                <ComboBox x:ConnectionId='51' x:Name="Item2Box"                                                                Width="220"/>
+                            </StackPanel>
+
+                            <TextBlock Text="Run Chance" Grid.Row="9"/>
+                            <TextBox x:ConnectionId='45' x:Name="RunChanceBox" Grid.Row="9" Grid.Column="1" PlaceholderText="0" Width="180"/>
+
+                            <TextBlock Text="Dex Classification" Grid.Row="10"/>
+                            <TextBox x:ConnectionId='46' x:Name="DexClassBox" Grid.Row="10" Grid.Column="1" PlaceholderText="Seed Pokémon"/>
+
+                            <TextBlock Text="Dex Entry" Grid.Row="11"/>
+                            <TextBox x:ConnectionId='47' x:Name="DexEntryBox" Grid.Row="11" Grid.Column="1" AcceptsReturn="True" TextWrapping="Wrap" Height="96"/>
+
+                            <TextBlock Text="Dex Height" Grid.Row="12"/>
+                            <TextBox x:ConnectionId='48' x:Name="DexHeightBox" Grid.Row="12" Grid.Column="1" PlaceholderText="3’03”" Width="180"/>
+
+                            <TextBlock Text="Dex Weight" Grid.Row="13"/>
+                            <TextBox x:ConnectionId='49' x:Name="DexWeightBox" Grid.Row="13" Grid.Column="1" PlaceholderText="28.7 lbs." Width="180"/>
                         </Grid>
                     </StackPanel>
                 </ScrollViewer>
@@ -108,7 +130,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBox x:ConnectionId='38' Width="64"                                   />
-                                    <ComboBox x:ConnectionId='39' Grid.Column="1"                                                                IsEditable="True"                                                                                                       />
+                                    <ComboBox x:ConnectionId='39' Grid.Column="1" ItemsSource="{Binding ElementName=SpeciesPage, Path=MoveOptions, Mode=OneTime}" IsEditable="True"                                                                                                       />
                                 </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>
@@ -155,17 +177,17 @@
 
                                         <!-- Left: Method + helper pickers -->
                                         <StackPanel Grid.Column="0" Spacing="8">
-                                            <ComboBox x:ConnectionId='23'                                                                                                                       IsEditable="True"                                            />
+                                            <ComboBox x:ConnectionId='23' ItemsSource="{Binding ElementName=SpeciesPage, Path=EvoMethods, Mode=OneTime}"                                             IsEditable="True"                                                                       />
                                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <ComboBox x:ConnectionId='26' x:Name="EvoParamItemBox"                                                                MinWidth="220"                                          />
+                                                <ComboBox x:ConnectionId='26' x:Name="EvoParamItemBox" ItemsSource="{Binding ElementName=SpeciesPage, Path=ItemOptions, Mode=OneTime}" MinWidth="220"                                                                   />
                                                 <TextBlock Text="(EVO_ITEM)"/>
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <ComboBox x:ConnectionId='25' x:Name="EvoParamMoveBox"                                                                MinWidth="220"                                          />
+                                                <ComboBox x:ConnectionId='25' x:Name="EvoParamMoveBox" ItemsSource="{Binding ElementName=SpeciesPage, Path=EvoMoveOptions, Mode=OneTime}" MinWidth="220"                                                                   />
                                                 <TextBlock Text="(EVO_MOVE)"/>
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <ComboBox x:ConnectionId='24' x:Name="EvoParamMapBox"                                                               MinWidth="220"                                         />
+                                                <ComboBox x:ConnectionId='24' x:Name="EvoParamMapBox" ItemsSource="{Binding ElementName=SpeciesPage, Path=MapOptions, Mode=OneTime}" MinWidth="220"                                                                 />
                                                 <TextBlock Text="(EVO_MAP)"/>
                                             </StackPanel>
                                         </StackPanel>
@@ -186,7 +208,7 @@
                                         </StackPanel>
 
                                         <!-- Right: Target species -->
-                                        <ComboBox x:ConnectionId='20' Grid.Column="2"                                                                                                                   IsEditable="True" MinWidth="220"/>
+                                         <ComboBox x:ConnectionId='20' Grid.Column="2" ItemsSource="{Binding ElementName=SpeciesPage, Path=SpeciesOptions, Mode=OneTime}"                                             IsEditable="True" MinWidth="220"                           />
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -209,7 +231,7 @@
                     <ListView x:ConnectionId='10' Grid.Row="1" x:Name="EggMovesList" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollMode="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollMode="Enabled">
                         <ListView.ItemTemplate>
                             <DataTemplate                                >
-                                <ComboBox x:ConnectionId='12'                                                                IsEditable="True"                                                                                                       />
+                                <ComboBox x:ConnectionId='12' ItemsSource="{Binding ElementName=SpeciesPage, Path=MoveOptions, Mode=OneTime}" IsEditable="True"                                                                                                       />
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>

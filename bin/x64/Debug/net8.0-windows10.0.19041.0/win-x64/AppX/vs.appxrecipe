@@ -29,25 +29,25 @@
     <AppXManifest Include="C:\Users\Dame\Documents\HGEngineGUI\bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\AppxManifest.xml">
       <PackagePath>AppxManifest.xml</PackagePath>
       <ReRegisterAppIfChanged>true</ReRegisterAppIfChanged>
-      <Modified>2025-08-10T10:11:06.096</Modified>
+      <Modified>2025-08-12T12:24:17.027</Modified>
     </AppXManifest>
   </ItemGroup>
   <ItemGroup>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\resources.pri">
       <PackagePath>resources.pri</PackagePath>
-      <Modified>2025-08-10T10:11:05.743</Modified>
+      <Modified>2025-08-12T12:24:16.749</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\HGEngineGUI.runtimeconfig.json">
       <PackagePath>HGEngineGUI.runtimeconfig.json</PackagePath>
-      <Modified>2025-08-10T10:11:05.454</Modified>
+      <Modified>2025-08-12T12:24:16.686</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\HGEngineGUI.dll">
       <PackagePath>HGEngineGUI.dll</PackagePath>
-      <Modified>2025-08-10T10:11:04.843</Modified>
+      <Modified>2025-08-12T12:24:16.540</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Debug\net8.0-windows10.0.19041.0\win-x64\apphost.exe">
       <PackagePath>HGEngineGUI.exe</PackagePath>
-      <Modified>2025-08-10T10:11:04.903</Modified>
+      <Modified>2025-08-12T12:24:16.547</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\lib\net8.0\Microsoft.CSharp.dll">
       <PackagePath>Microsoft.CSharp.dll</PackagePath>
@@ -911,7 +911,7 @@
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\HGEngineGUI.deps.json">
       <PackagePath>HGEngineGUI.deps.json</PackagePath>
-      <Modified>2025-08-10T10:11:05.417</Modified>
+      <Modified>2025-08-12T12:24:16.683</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\Assets\LockScreenLogo.scale-200.png">
       <PackagePath>Assets\LockScreenLogo.scale-200.png</PackagePath>

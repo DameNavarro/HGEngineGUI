@@ -36,6 +36,21 @@ namespace HGEngineGUI
         public App()
         {
             InitializeComponent();
+            this.UnhandledException += App_UnhandledException;
+            try
+            {
+                AppDomain.CurrentDomain.FirstChanceException += (s, e) =>
+                {
+                    try
+                    {
+                        var folder = Windows.Storage.ApplicationData.Current.LocalFolder;
+                        var path = System.IO.Path.Combine(folder.Path, "first_chance.log");
+                        System.IO.File.AppendAllText(path, $"{DateTime.Now:u}\n{e.Exception}\n---\n");
+                    }
+                    catch { }
+                };
+            }
+            catch { }
         }
 
         /// <summary>
@@ -47,6 +62,36 @@ namespace HGEngineGUI
             _window = new MainWindow();
             _window.Activate();
             MainWindow = _window;
+        }
+
+        private async void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+        {
+            try
+            {
+                e.Handled = true;
+                var message = e.Exception?.Message ?? e.Message;
+                // Persist to a simple log for packaged builds
+                try
+                {
+                    var folder = Windows.Storage.ApplicationData.Current.LocalFolder;
+                    var logPath = System.IO.Path.Combine(folder.Path, "last_crash.txt");
+                    await System.IO.File.WriteAllTextAsync(logPath, ($"{DateTime.Now:u}\n{message}\n{e.Exception}"));
+                }
+                catch { }
+
+                if (MainWindow is not null)
+                {
+                    var dlg = new ContentDialog
+                    {
+                        Title = "Unexpected error",
+                        Content = message,
+                        PrimaryButtonText = "Close",
+                        XamlRoot = (MainWindow as Window)?.Content.XamlRoot
+                    };
+                    await dlg.ShowAsync();
+                }
+            }
+            catch { }
         }
     }
 }

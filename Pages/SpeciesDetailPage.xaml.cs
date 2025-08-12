@@ -6,15 +6,20 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
-using System.Collections.Generic;
 
 namespace HGEngineGUI.Pages
 {
     public sealed partial class SpeciesDetailPage : Page
     {
+        public IReadOnlyList<string> EvoMethods { get; private set; } = Array.Empty<string>();
+        public IReadOnlyList<string> SpeciesOptions { get; private set; } = Array.Empty<string>();
+        public IReadOnlyList<string> ItemOptions { get; private set; } = Array.Empty<string>();
+        public IReadOnlyList<string> EvoMoveOptions { get; private set; } = Array.Empty<string>();
+        public IReadOnlyList<string> MapOptions { get; private set; } = Array.Empty<string>();
         private SpeciesEntry? _species;
         private List<(int level, string move)> _levelUp = new();
         private List<LevelUpEntry> _levelUpModel = new();
+        public IReadOnlyList<string> MoveOptions { get; private set; } = Array.Empty<string>();
         private List<string> _egg = new();
         private List<EggMoveEntry> _eggModel = new();
         private List<string> _tmhmAll = new();
@@ -39,19 +44,28 @@ namespace HGEngineGUI.Pages
             {
                 if (sender is ComboBox cb)
                 {
+                    // Always populate ItemsSource at load time to avoid template timing issues
+                    if (cb.ItemsSource == null)
+                    {
+                        cb.ItemsSource = Data.HGParsers.MoveMacros;
+                    }
                     if (cb.DataContext is LevelUpEntry lu && !string.IsNullOrWhiteSpace(lu.Move))
                     {
-                        if (cb.SelectedItem == null && cb.ItemsSource is IEnumerable<string> moves && moves.Contains(lu.Move))
+                        if (cb.ItemsSource is IEnumerable<string> moves && moves.Contains(lu.Move))
                         {
-                            cb.SelectedValue = lu.Move;
+                            cb.SelectedItem = lu.Move;
                         }
                         cb.Text = lu.Move;
                     }
                     else if (cb.DataContext is EggMoveEntry em && !string.IsNullOrWhiteSpace(em.Move))
                     {
-                        if (cb.SelectedItem == null && cb.ItemsSource is IEnumerable<string> moves2 && moves2.Contains(em.Move))
+                        if (cb.ItemsSource == null)
                         {
-                            cb.SelectedValue = em.Move;
+                            cb.ItemsSource = Data.HGParsers.MoveMacros;
+                        }
+                        if (cb.ItemsSource is IEnumerable<string> moves2 && moves2.Contains(em.Move))
+                        {
+                            cb.SelectedItem = em.Move;
                         }
                         cb.Text = em.Move;
                     }
@@ -81,15 +95,37 @@ namespace HGEngineGUI.Pages
             catch { /* ignore icon load issues */ }
 
             await Data.HGParsers.RefreshSpeciesDetailsAsync(_species.Id, _species.Name);
+            // Ensure macro caches exist; if not, load them
+            if (!Data.HGParsers.TypeMacros.Any() || !Data.HGParsers.AbilityMacros.Any() || !Data.HGParsers.EggGroupMacros.Any() || !Data.HGParsers.GrowthRateMacros.Any() || !Data.HGParsers.ItemMacros.Any())
+            {
+                await Data.HGParsers.RefreshCachesAsync();
+            }
+            // Populate static resources at runtime so templates have data before they render
+            // no-op
+            // Bind dropdown sources explicitly so they are populated even if page loaded before caches
+            Type1Box.ItemsSource = Data.HGParsers.TypeMacros;
+            Type2Box.ItemsSource = Data.HGParsers.TypeMacros;
+            var abilityList = Data.HGParsers.AbilityMacros.ToList();
+            abilityList.Sort(StringComparer.Ordinal);
+            Ability1Box.ItemsSource = abilityList;
+            Ability2Box.ItemsSource = abilityList;
+            AbilityHiddenBox.ItemsSource = abilityList;
+            Egg1Box.ItemsSource = Data.HGParsers.EggGroupMacros;
+            Egg2Box.ItemsSource = Data.HGParsers.EggGroupMacros;
+            GrowthBox.ItemsSource = Data.HGParsers.GrowthRateMacros;
+            Item1Box.ItemsSource = Data.HGParsers.ItemMacros;
+            Item2Box.ItemsSource = Data.HGParsers.ItemMacros;
+            // Snapshot move list for summaries/editors
+            MoveOptions = Data.HGParsers.MoveMacros.ToList();
             _levelUp = Data.HGParsers.LevelUpMoves.ToList();
             _levelUpModel = _levelUp.Select(m => new LevelUpEntry { Level = m.level, Move = m.move }).ToList();
-            LevelUpList.ItemsSource = _levelUpModel;
+            LevelUpSummary.Text = string.Join("\n", _levelUpModel.Select(m => $"{m.Level}: {m.Move}"));
             _evolutions = Data.HGParsers.Evolutions.ToList();
             _evoModel = _evolutions.Select(e => new EvolutionEntry { Method = e.method, Param = e.param, Target = e.target }).ToList();
-            EvolutionList.ItemsSource = _evoModel;
+            EvolutionSummary.Text = string.Join("\n", _evoModel.Select(e => $"{e.Method} {e.Param} -> {e.Target}"));
             _egg = Data.HGParsers.EggMoves.ToList();
             _eggModel = _egg.Select(m => new EggMoveEntry { Move = m }).ToList();
-            EggMovesList.ItemsSource = _eggModel;
+            EggMovesSummary.Text = string.Join("\n", _eggModel.Select(m => m.Move));
             // Tutor preselection
             _tutorSelected = new HashSet<string>(Data.HGParsers.TutorSelectedForSpecies);
             _tutorAll = Data.HGParsers.TutorHeaders.ToList();
@@ -134,15 +170,22 @@ namespace HGEngineGUI.Pages
                 EvSpeBox.Text = ov.EvYields.spd.ToString();
                 Ability1Box.SelectedItem = ov.Ability1;
                 Ability2Box.SelectedItem = ov.Ability2;
+                AbilityHiddenBox.SelectedItem = ov.AbilityHidden;
                 Egg1Box.SelectedItem = ov.EggGroup1;
                 Egg2Box.SelectedItem = ov.EggGroup2;
                 GrowthBox.SelectedItem = ov.GrowthRate;
                 GenderBox.Text = ov.GenderRatio.ToString();
                 CatchBox.Text = ov.CatchRate.ToString();
+                BaseExpBox.Text = ov.BaseExp.ToString();
                 EggCyclesBox.Text = ov.EggCycles.ToString();
                 FriendBox.Text = ov.BaseFriendship.ToString();
                 Item1Box.SelectedItem = ov.Item1;
                 Item2Box.SelectedItem = ov.Item2;
+                RunChanceBox.Text = ov.RunChance.ToString();
+                DexClassBox.Text = ov.DexClassification ?? string.Empty;
+                DexEntryBox.Text = ov.DexEntry ?? string.Empty;
+                DexHeightBox.Text = ov.DexHeight ?? string.Empty;
+                DexWeightBox.Text = ov.DexWeight ?? string.Empty;
             }
         }
 
@@ -168,18 +211,18 @@ namespace HGEngineGUI.Pages
                 {
                     _levelUpModel.Add(new LevelUpEntry { Level = lvl, Move = move });
                     _levelUpModel = _levelUpModel.OrderBy(x => x.Level).ToList();
-                    LevelUpList.ItemsSource = null; LevelUpList.ItemsSource = _levelUpModel;
+                    // no-op: ListView removed in release-safe UI
                 }
             }
         }
 
         private void OnDeleteLevelUp(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
-            if (LevelUpList.SelectedIndex >= 0)
+            /* if (LevelUpList.SelectedIndex >= 0)
             {
                 _levelUpModel.RemoveAt(LevelUpList.SelectedIndex);
                 LevelUpList.ItemsSource = null; LevelUpList.ItemsSource = _levelUpModel;
-            }
+            } */
         }
 
         private async void OnSaveLevelUp(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -222,18 +265,18 @@ namespace HGEngineGUI.Pages
                 if (!string.IsNullOrWhiteSpace(text))
                 {
                     _eggModel.Add(new EggMoveEntry { Move = text });
-                    EggMovesList.ItemsSource = null; EggMovesList.ItemsSource = _eggModel;
+                    // no-op: ListView removed in release-safe UI
                 }
             }
         }
 
         private void OnDeleteEggMove(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
-            if (EggMovesList.SelectedIndex >= 0)
+            /* if (EggMovesList.SelectedIndex >= 0)
             {
                 _eggModel.RemoveAt(EggMovesList.SelectedIndex);
                 EggMovesList.ItemsSource = null; EggMovesList.ItemsSource = _eggModel;
-            }
+            } */
         }
 
         private async void OnSaveEggMoves(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -297,18 +340,18 @@ namespace HGEngineGUI.Pages
                 if (int.TryParse(paramText, out var param) && !string.IsNullOrWhiteSpace(method) && !string.IsNullOrWhiteSpace(target))
                 {
                     _evoModel.Add(new EvolutionEntry { Method = method.Trim(), Param = param, Target = target.Trim() });
-                    EvolutionList.ItemsSource = null; EvolutionList.ItemsSource = _evoModel;
+                    // no-op: ListView removed in release-safe UI
                 }
             }
         }
 
         private void OnDeleteEvolution(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
-            if (EvolutionList.SelectedIndex >= 0)
+            /* if (EvolutionList.SelectedIndex >= 0)
             {
                 _evoModel.RemoveAt(EvolutionList.SelectedIndex);
                 EvolutionList.ItemsSource = null; EvolutionList.ItemsSource = _evoModel;
-            }
+            } */
         }
 
         private async void OnSaveEvolutions(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -393,6 +436,12 @@ namespace HGEngineGUI.Pages
             if (_species == null) return;
             var ov = CollectOverviewFromUi();
             await Data.HGSerializers.SaveOverviewAsync(_species.Name, ov);
+            // Also persist Hidden Ability via HiddenAbilityTable.c
+            var hidden = (AbilityHiddenBox.SelectedItem as string) ?? ov.AbilityHidden;
+            if (!string.IsNullOrWhiteSpace(hidden))
+            {
+                await Data.HGSerializers.SaveHiddenAbilityAsync(_species.Name, hidden);
+            }
         }
 
         private async void OnPreviewOverview(object sender, RoutedEventArgs e)
@@ -401,6 +450,23 @@ namespace HGEngineGUI.Pages
             var ov = CollectOverviewFromUi();
             var diff = await Data.HGSerializers.PreviewOverviewAsync(_species.Name, ov);
             await ShowDiffDialog(diff, "mondata.s");
+        }
+
+        private async void OnSaveHiddenAbility(object sender, RoutedEventArgs e)
+        {
+            if (_species == null) return;
+            var ability = (AbilityHiddenBox.SelectedItem as string) ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(ability)) return;
+            await Data.HGSerializers.SaveHiddenAbilityAsync(_species.Name, ability);
+        }
+
+        private async void OnPreviewHiddenAbility(object sender, RoutedEventArgs e)
+        {
+            if (_species == null) return;
+            var ability = (AbilityHiddenBox.SelectedItem as string) ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(ability)) return;
+            var diff = await Data.HGSerializers.PreviewHiddenAbilityAsync(_species.Name, ability);
+            await ShowDiffDialog(diff, "HiddenAbilityTable.c");
         }
 
         private Data.HGParsers.SpeciesOverview CollectOverviewFromUi()
@@ -423,15 +489,22 @@ namespace HGEngineGUI.Pages
             ov.EvYields = (ehp, eatk, edef, espd, esatk, essd);
             ov.Ability1 = (Ability1Box.SelectedItem as string) ?? "ABILITY_NONE";
             ov.Ability2 = (Ability2Box.SelectedItem as string) ?? "ABILITY_NONE";
+            ov.AbilityHidden = (AbilityHiddenBox.SelectedItem as string) ?? "ABILITY_NONE";
             ov.EggGroup1 = (Egg1Box.SelectedItem as string) ?? "EGG_GROUP_NONE";
             ov.EggGroup2 = (Egg2Box.SelectedItem as string) ?? "EGG_GROUP_NONE";
             ov.GrowthRate = (GrowthBox.SelectedItem as string) ?? "GROWTH_MEDIUM_FAST";
             int.TryParse(GenderBox.Text, out v); ov.GenderRatio = v;
             int.TryParse(CatchBox.Text, out v); ov.CatchRate = v;
+            int.TryParse(BaseExpBox.Text, out v); ov.BaseExp = v;
             int.TryParse(EggCyclesBox.Text, out v); ov.EggCycles = v;
             int.TryParse(FriendBox.Text, out v); ov.BaseFriendship = v;
             ov.Item1 = (Item1Box.SelectedItem as string) ?? "ITEM_NONE";
             ov.Item2 = (Item2Box.SelectedItem as string) ?? "ITEM_NONE";
+            int.TryParse(RunChanceBox.Text, out v); ov.RunChance = v;
+            ov.DexClassification = DexClassBox.Text ?? string.Empty;
+            ov.DexEntry = DexEntryBox.Text ?? string.Empty;
+            ov.DexHeight = DexHeightBox.Text ?? string.Empty;
+            ov.DexWeight = DexWeightBox.Text ?? string.Empty;
             return ov;
         }
 
@@ -475,6 +548,39 @@ namespace HGEngineGUI.Pages
         }
 
         // Evolution param auto-sync handlers
+        private void OnEvoMethodLoaded(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (sender is ComboBox cb && cb.DataContext is EvolutionEntry model)
+                {
+                    if (cb.ItemsSource == null) cb.ItemsSource = Data.HGParsers.EvolutionMethodMacros;
+                    if (cb.SelectedItem == null && cb.ItemsSource is IEnumerable<string> methods && !string.IsNullOrWhiteSpace(model.Method) && methods.Contains(model.Method))
+                    {
+                        cb.SelectedItem = model.Method;
+                    }
+                    cb.Text = model.Method;
+                }
+            }
+            catch { }
+        }
+
+        private void OnEvoTargetLoaded(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (sender is ComboBox cb && cb.DataContext is EvolutionEntry model)
+                {
+                    if (cb.ItemsSource == null) cb.ItemsSource = Data.HGParsers.SpeciesMacroNames;
+                    if (cb.SelectedItem == null && cb.ItemsSource is IEnumerable<string> species && !string.IsNullOrWhiteSpace(model.Target) && species.Contains(model.Target))
+                    {
+                        cb.SelectedItem = model.Target;
+                    }
+                    cb.Text = model.Target;
+                }
+            }
+            catch { }
+        }
         private void OnEvolutionMethodChanged(object sender, SelectionChangedEventArgs e)
         {
             // If method is EVO_ITEM, show item picker; else keep numeric box
@@ -558,6 +664,56 @@ namespace HGEngineGUI.Pages
                         default: mapped = 0; break;
                     }
                     model.Param = mapped;
+                }
+            }
+            catch { }
+        }
+
+        private void OnEvoItemLoaded(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (sender is ComboBox cb && cb.DataContext is EvolutionEntry model)
+                {
+                    if (cb.ItemsSource == null) cb.ItemsSource = Data.HGParsers.ItemMacros;
+                    // If current method is EVO_ITEM, reflect item's numeric param back to macro text for display when possible
+                    if (string.Equals(model.Method, "EVO_ITEM", StringComparison.Ordinal))
+                    {
+                        // We cannot invert number->macro reliably without a reverse map here; rely on Text showing macro if SelectedItem exists
+                        // If Param was set via helper earlier, SelectedItem will be set via SelectionChanged handler
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void OnEvoMoveLoaded(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (sender is ComboBox cb && cb.DataContext is EvolutionEntry model)
+                {
+                    if (cb.ItemsSource == null) cb.ItemsSource = Data.HGParsers.MoveMacros;
+                    if (string.Equals(model.Method, "EVO_MOVE", StringComparison.Ordinal))
+                    {
+                        cb.Text = cb.SelectedItem as string ?? cb.Text;
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void OnEvoMapLoaded(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (sender is ComboBox cb && cb.DataContext is EvolutionEntry model)
+                {
+                    if (cb.ItemsSource == null) cb.ItemsSource = Data.HGParsers.MapMacros;
+                    if (string.Equals(model.Method, "EVO_MAP", StringComparison.Ordinal))
+                    {
+                        cb.Text = cb.SelectedItem as string ?? cb.Text;
+                    }
                 }
             }
             catch { }
