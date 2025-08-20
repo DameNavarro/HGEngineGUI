@@ -37,6 +37,140 @@ namespace HGEngineGUI.Pages
             InitializeComponent();
         }
 
+        private void OnLevelUpListLoaded(object sender, RoutedEventArgs e)
+        {
+            try { (LevelUpList as ItemsControl).ItemsSource = null; (LevelUpList as ItemsControl).ItemsSource = _levelUpModel; } catch { }
+        }
+
+        private void OnEvolutionListLoaded(object sender, RoutedEventArgs e) { }
+
+        private void RenderEvolutionsStack()
+        {
+            if (EvolutionStack == null) return;
+            EvolutionStack.Children.Clear();
+            foreach (var row in _evoModel)
+            {
+                var outer = new StackPanel { Spacing = 8, Padding = new Thickness(8) };
+
+                // Row 1: method, param, target
+                var top = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                var methodCombo = new ComboBox
+                {
+                    Width = 220,
+                    IsEditable = true,
+                    Header = "Method"
+                };
+                methodCombo.ItemsSource = Data.HGParsers.EvolutionMethodMacros;
+                if (Data.HGParsers.EvolutionMethodMacros.Contains(row.Method)) methodCombo.SelectedItem = row.Method;
+                methodCombo.Text = row.Method;
+                methodCombo.SelectionChanged += (s, e) => { row.Method = (methodCombo.SelectedItem as string) ?? (methodCombo.Text ?? string.Empty); };
+                methodCombo.LostFocus += (s, e) => { row.Method = methodCombo.Text ?? string.Empty; };
+
+                var paramBox = new TextBox
+                {
+                    Width = 140,
+                    Header = "Param",
+                    Text = row.Param.ToString()
+                };
+                paramBox.TextChanging += (tb, args) =>
+                {
+                    if (int.TryParse(paramBox.Text, out var pv)) row.Param = pv;
+                };
+
+                var targetCombo = new ComboBox
+                {
+                    Width = 220,
+                    IsEditable = true,
+                    Header = "Target"
+                };
+                targetCombo.ItemsSource = Data.HGParsers.SpeciesMacroNames;
+                if (Data.HGParsers.SpeciesMacroNames.Contains(row.Target)) targetCombo.SelectedItem = row.Target;
+                targetCombo.Text = row.Target;
+                targetCombo.SelectionChanged += (s, e) => { row.Target = (targetCombo.SelectedItem as string) ?? (targetCombo.Text ?? string.Empty); };
+                targetCombo.LostFocus += (s, e) => { row.Target = targetCombo.Text ?? string.Empty; };
+
+                top.Children.Add(methodCombo);
+                top.Children.Add(paramBox);
+                top.Children.Add(targetCombo);
+                outer.Children.Add(top);
+
+                // Row 2: helpers and remove
+                var bottom = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                var itemCombo = new ComboBox { Width = 220, Header = "Item (EVO_ITEM)" };
+                itemCombo.ItemsSource = Data.HGParsers.ItemMacros;
+                itemCombo.SelectionChanged += (s, e) =>
+                {
+                    if (!string.Equals(row.Method, "EVO_ITEM", StringComparison.Ordinal)) return;
+                    var macro = itemCombo.SelectedItem as string;
+                    if (string.IsNullOrEmpty(macro)) return;
+                    if (Data.HGParsers.TryGetItemValue(macro, out var id)) row.Param = id;
+                };
+
+                var moveCombo = new ComboBox { Width = 220, Header = "Move (EVO_MOVE)" };
+                moveCombo.ItemsSource = Data.HGParsers.MoveMacros;
+                moveCombo.SelectionChanged += (s, e) =>
+                {
+                    if (!string.Equals(row.Method, "EVO_MOVE", StringComparison.Ordinal)) return;
+                    var macro = moveCombo.SelectedItem as string;
+                    if (string.IsNullOrEmpty(macro)) return;
+                    if (Data.HGParsers.TryGetMoveValue(macro, out var id)) row.Param = id;
+                };
+
+                var mapCombo = new ComboBox { Width = 220, Header = "Map (EVO_MAP)" };
+                mapCombo.ItemsSource = Data.HGParsers.MapMacros;
+                mapCombo.SelectionChanged += (s, e) =>
+                {
+                    if (!string.Equals(row.Method, "EVO_MAP", StringComparison.Ordinal)) return;
+                    var macro = mapCombo.SelectedItem as string;
+                    if (string.IsNullOrEmpty(macro)) return;
+                    if (Data.HGParsers.TryGetMapValue(macro, out var id)) row.Param = id;
+                };
+
+                var timeCombo = new ComboBox { Width = 160, Header = "Friend time" };
+                timeCombo.Items.Add("DAY");
+                timeCombo.Items.Add("NIGHT");
+                timeCombo.Items.Add("MORNING");
+                timeCombo.Items.Add("EVENING");
+                timeCombo.SelectionChanged += (s, e) =>
+                {
+                    if (!row.Method.StartsWith("EVO_FRIENDSHIP", StringComparison.Ordinal)) return;
+                    var val = timeCombo.SelectedItem as string;
+                    int mapped = 0;
+                    switch (val)
+                    {
+                        case "DAY": mapped = 1; break;
+                        case "NIGHT": mapped = 2; break;
+                        case "MORNING": mapped = 3; break;
+                        case "EVENING": mapped = 4; break;
+                    }
+                    row.Param = mapped;
+                };
+
+                var removeBtn = new Button { Content = "Remove" };
+                removeBtn.Click += (s, e) => { _evoModel.Remove(row); RenderEvolutionsStack(); };
+
+                bottom.Children.Add(itemCombo);
+                bottom.Children.Add(moveCombo);
+                bottom.Children.Add(mapCombo);
+                bottom.Children.Add(timeCombo);
+                bottom.Children.Add(removeBtn);
+                outer.Children.Add(bottom);
+
+                EvolutionStack.Children.Add(outer);
+            }
+            try { StatusText.Text = $"Evo rows (manual): {_evoModel.Count}"; } catch { }
+        }
+
+        private void OnEvolutionStackLoaded(object sender, RoutedEventArgs e)
+        {
+            try { RenderEvolutionsStack(); } catch (Exception ex) { StatusText.Text = ex.Message; }
+        }
+
+        private void OnEggMovesListLoaded(object sender, RoutedEventArgs e)
+        {
+            try { (EggMovesList as ItemsControl).ItemsSource = null; (EggMovesList as ItemsControl).ItemsSource = _eggModel; } catch { }
+        }
+
         // Ensure initial move text renders even if SelectedItem isn't resolved yet
         private void OnMoveComboLoaded(object sender, RoutedEventArgs e)
         {
@@ -119,13 +253,14 @@ namespace HGEngineGUI.Pages
             MoveOptions = Data.HGParsers.MoveMacros.ToList();
             _levelUp = Data.HGParsers.LevelUpMoves.ToList();
             _levelUpModel = _levelUp.Select(m => new LevelUpEntry { Level = m.level, Move = m.move }).ToList();
-            LevelUpSummary.Text = string.Join("\n", _levelUpModel.Select(m => $"{m.Level}: {m.Move}"));
+            LevelUpList.ItemsSource = _levelUpModel;
             _evolutions = Data.HGParsers.Evolutions.ToList();
             _evoModel = _evolutions.Select(e => new EvolutionEntry { Method = e.method, Param = e.param, Target = e.target }).ToList();
-            EvolutionSummary.Text = string.Join("\n", _evoModel.Select(e => $"{e.Method} {e.Param} -> {e.Target}"));
+            RenderEvolutionsStack();
             _egg = Data.HGParsers.EggMoves.ToList();
             _eggModel = _egg.Select(m => new EggMoveEntry { Move = m }).ToList();
-            EggMovesSummary.Text = string.Join("\n", _eggModel.Select(m => m.Move));
+            EggMovesList.ItemsSource = _eggModel;
+            try { StatusText.Text = $"Loaded: {_levelUpModel.Count} level-up, {_evoModel.Count} evolutions, {_eggModel.Count} egg moves."; } catch { }
             // Tutor preselection
             _tutorSelected = new HashSet<string>(Data.HGParsers.TutorSelectedForSpecies);
             _tutorAll = Data.HGParsers.TutorHeaders.ToList();
@@ -211,18 +346,14 @@ namespace HGEngineGUI.Pages
                 {
                     _levelUpModel.Add(new LevelUpEntry { Level = lvl, Move = move });
                     _levelUpModel = _levelUpModel.OrderBy(x => x.Level).ToList();
-                    // no-op: ListView removed in release-safe UI
+                    LevelUpList.ItemsSource = null; LevelUpList.ItemsSource = _levelUpModel;
                 }
             }
         }
 
         private void OnDeleteLevelUp(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
-            /* if (LevelUpList.SelectedIndex >= 0)
-            {
-                _levelUpModel.RemoveAt(LevelUpList.SelectedIndex);
-                LevelUpList.ItemsSource = null; LevelUpList.ItemsSource = _levelUpModel;
-            } */
+            // With ItemsControl, provide row-level Remove buttons instead
         }
 
         private async void OnSaveLevelUp(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -265,18 +396,14 @@ namespace HGEngineGUI.Pages
                 if (!string.IsNullOrWhiteSpace(text))
                 {
                     _eggModel.Add(new EggMoveEntry { Move = text });
-                    // no-op: ListView removed in release-safe UI
+                    EggMovesList.ItemsSource = null; EggMovesList.ItemsSource = _eggModel;
                 }
             }
         }
 
         private void OnDeleteEggMove(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
-            /* if (EggMovesList.SelectedIndex >= 0)
-            {
-                _eggModel.RemoveAt(EggMovesList.SelectedIndex);
-                EggMovesList.ItemsSource = null; EggMovesList.ItemsSource = _eggModel;
-            } */
+            // With ItemsControl, provide row-level Remove buttons instead
         }
 
         private async void OnSaveEggMoves(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -340,18 +467,41 @@ namespace HGEngineGUI.Pages
                 if (int.TryParse(paramText, out var param) && !string.IsNullOrWhiteSpace(method) && !string.IsNullOrWhiteSpace(target))
                 {
                     _evoModel.Add(new EvolutionEntry { Method = method.Trim(), Param = param, Target = target.Trim() });
-                    // no-op: ListView removed in release-safe UI
+                    RenderEvolutionsStack();
                 }
             }
         }
 
         private void OnDeleteEvolution(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
-            /* if (EvolutionList.SelectedIndex >= 0)
+            // With ItemsControl, provide row-level Remove buttons instead
+        }
+
+        private void OnRemoveLevelUpRow(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is LevelUpEntry row)
             {
-                _evoModel.RemoveAt(EvolutionList.SelectedIndex);
-                EvolutionList.ItemsSource = null; EvolutionList.ItemsSource = _evoModel;
-            } */
+                _levelUpModel.Remove(row);
+                (LevelUpList as ItemsControl).ItemsSource = null; (LevelUpList as ItemsControl).ItemsSource = _levelUpModel;
+            }
+        }
+
+        private void OnRemoveEggRow(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is EggMoveEntry row)
+            {
+                _eggModel.Remove(row);
+                (EggMovesList as ItemsControl).ItemsSource = null; (EggMovesList as ItemsControl).ItemsSource = _eggModel;
+            }
+        }
+
+        private void OnRemoveEvolutionRow(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is EvolutionEntry row)
+            {
+                _evoModel.Remove(row);
+                RenderEvolutionsStack();
+            }
         }
 
         private async void OnSaveEvolutions(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)

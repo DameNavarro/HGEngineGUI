@@ -122,7 +122,22 @@
                         <AppBarButton Icon="Save" Label="Save" Click="OnSaveLevelUp"/>
                         <AppBarButton Icon="Page" Label="Preview" Click="OnPreviewLevelUp"/>
                     </CommandBar>
-                    <TextBox Grid.Row="1" x:Name="LevelUpSummary" IsReadOnly="True" FontFamily="Consolas" AcceptsReturn="True" TextWrapping="NoWrap"/>
+                    <ItemsControl Grid.Row="1" x:Name="LevelUpList" Loaded="OnLevelUpListLoaded">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="8" Padding="4">
+                                    <TextBox Header="Level" Width="120" Text="{Binding Level, Mode=TwoWay}"/>
+                                    <ComboBox Width="320" IsEditable="True" PlaceholderText="MOVE_*" Loaded="OnMoveComboLoaded" Text="{Binding Move, Mode=TwoWay}"/>
+                                    <Button Content="Remove" Click="OnRemoveLevelUpRow"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </Grid>
             </TabViewItem>
                         <TabViewItem Header="TM/HM">
@@ -152,7 +167,11 @@
                         <AppBarButton Icon="Save" Label="Save" Click="OnSaveEvolutions"/>
                         <AppBarButton Icon="Page" Label="Preview" Click="OnPreviewEvolutions"/>
                     </CommandBar>
-                    <TextBox Grid.Row="1" x:Name="EvolutionSummary" IsReadOnly="True" FontFamily="Consolas" AcceptsReturn="True" TextWrapping="NoWrap"/>
+                    <StackPanel Grid.Row="1" Spacing="8">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto">
+                            <StackPanel x:Name="EvolutionStack" Loaded="OnEvolutionStackLoaded"/>
+                        </ScrollViewer>
+                    </StackPanel>
                 </Grid>
             </TabViewItem>
             <TabViewItem Header="Egg Moves">
@@ -167,7 +186,21 @@
                         <AppBarButton Icon="Save" Label="Save" Click="OnSaveEggMoves"/>
                         <AppBarButton Icon="Page" Label="Preview" Click="OnPreviewEggMoves"/>
                     </CommandBar>
-                    <TextBox Grid.Row="1" x:Name="EggMovesSummary" IsReadOnly="True" FontFamily="Consolas" AcceptsReturn="True" TextWrapping="NoWrap"/>
+                    <ItemsControl Grid.Row="1" x:Name="EggMovesList" Loaded="OnEggMovesListLoaded">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="8" Padding="4">
+                                    <ComboBox Width="320" IsEditable="True" PlaceholderText="MOVE_*" Loaded="OnMoveComboLoaded" Text="{Binding Move, Mode=TwoWay}"/>
+                                    <Button Content="Remove" Click="OnRemoveEggRow"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </Grid>
             </TabViewItem>
             <TabViewItem Header="Tutor Moves">

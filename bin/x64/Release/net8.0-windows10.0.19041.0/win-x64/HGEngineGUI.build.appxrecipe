@@ -34,46 +34,46 @@
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\apphost.exe">
       <PackagePath>HGEngineGUI.exe</PackagePath>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\Microsoft.DiaSymReader.Native.amd64.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\Microsoft.DiaSymReader.Native.amd64.dll">
       <PackagePath>Microsoft.DiaSymReader.Native.amd64.dll</PackagePath>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\System.IO.Compression.Native.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\System.IO.Compression.Native.dll">
       <PackagePath>System.IO.Compression.Native.dll</PackagePath>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\clretwrc.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\clretwrc.dll">
       <PackagePath>clretwrc.dll</PackagePath>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\clrgc.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\clrgc.dll">
       <PackagePath>clrgc.dll</PackagePath>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\clrjit.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\clrjit.dll">
       <PackagePath>clrjit.dll</PackagePath>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\coreclr.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\coreclr.dll">
       <PackagePath>coreclr.dll</PackagePath>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\createdump.exe">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\createdump.exe">
       <PackagePath>createdump.exe</PackagePath>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\hostfxr.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\hostfxr.dll">
       <PackagePath>hostfxr.dll</PackagePath>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\hostpolicy.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\hostpolicy.dll">
       <PackagePath>hostpolicy.dll</PackagePath>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\mscordaccore.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\mscordaccore.dll">
       <PackagePath>mscordaccore.dll</PackagePath>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\mscordaccore_amd64_amd64_8.0.1825.31117.dll">
-      <PackagePath>mscordaccore_amd64_amd64_8.0.1825.31117.dll</PackagePath>
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\mscordaccore_amd64_amd64_8.0.1925.36514.dll">
+      <PackagePath>mscordaccore_amd64_amd64_8.0.1925.36514.dll</PackagePath>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\mscordbi.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\mscordbi.dll">
       <PackagePath>mscordbi.dll</PackagePath>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\mscorrc.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\mscorrc.dll">
       <PackagePath>mscorrc.dll</PackagePath>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\msquic.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\msquic.dll">
       <PackagePath>msquic.dll</PackagePath>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.web.webview2\1.0.2903.40\runtimes\win-x64\native\WebView2Loader.dll">

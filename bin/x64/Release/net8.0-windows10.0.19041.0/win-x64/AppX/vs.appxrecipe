@@ -29,75 +29,75 @@
     <AppXManifest Include="C:\Users\Dame\Documents\HGEngineGUI\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64\AppxManifest.xml">
       <PackagePath>AppxManifest.xml</PackagePath>
       <ReRegisterAppIfChanged>true</ReRegisterAppIfChanged>
-      <Modified>2025-08-12T12:21:46.548</Modified>
+      <Modified>2025-08-20T08:16:01.444</Modified>
     </AppXManifest>
   </ItemGroup>
   <ItemGroup>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64\resources.pri">
       <PackagePath>resources.pri</PackagePath>
-      <Modified>2025-08-12T12:21:29.396</Modified>
+      <Modified>2025-08-20T08:15:45.123</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64\HGEngineGUI.runtimeconfig.json">
       <PackagePath>HGEngineGUI.runtimeconfig.json</PackagePath>
-      <Modified>2025-08-12T12:21:29.323</Modified>
+      <Modified>2025-08-20T04:20:50.093</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\apphost.exe">
       <PackagePath>HGEngineGUI.exe</PackagePath>
-      <Modified>2025-08-12T12:21:29.131</Modified>
+      <Modified>2025-08-20T08:15:44.779</Modified>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\Microsoft.DiaSymReader.Native.amd64.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\Microsoft.DiaSymReader.Native.amd64.dll">
       <PackagePath>Microsoft.DiaSymReader.Native.amd64.dll</PackagePath>
       <Modified>2024-11-27T04:18:14.000</Modified>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\System.IO.Compression.Native.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\System.IO.Compression.Native.dll">
       <PackagePath>System.IO.Compression.Native.dll</PackagePath>
-      <Modified>2025-06-12T00:26:12.000</Modified>
+      <Modified>2025-07-15T17:57:24.000</Modified>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\clretwrc.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\clretwrc.dll">
       <PackagePath>clretwrc.dll</PackagePath>
-      <Modified>2025-06-12T00:15:12.000</Modified>
+      <Modified>2025-07-15T17:46:04.000</Modified>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\clrgc.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\clrgc.dll">
       <PackagePath>clrgc.dll</PackagePath>
-      <Modified>2025-06-12T00:13:12.000</Modified>
+      <Modified>2025-07-15T17:43:54.000</Modified>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\clrjit.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\clrjit.dll">
       <PackagePath>clrjit.dll</PackagePath>
-      <Modified>2025-06-12T00:12:26.000</Modified>
+      <Modified>2025-07-15T17:43:18.000</Modified>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\coreclr.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\coreclr.dll">
       <PackagePath>coreclr.dll</PackagePath>
-      <Modified>2025-06-12T00:09:54.000</Modified>
+      <Modified>2025-07-15T17:40:42.000</Modified>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\createdump.exe">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\createdump.exe">
       <PackagePath>createdump.exe</PackagePath>
-      <Modified>2025-06-12T00:15:12.000</Modified>
+      <Modified>2025-07-15T17:46:02.000</Modified>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\hostfxr.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\hostfxr.dll">
       <PackagePath>hostfxr.dll</PackagePath>
-      <Modified>2025-06-12T00:25:38.000</Modified>
+      <Modified>2025-07-15T17:56:48.000</Modified>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\hostpolicy.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\hostpolicy.dll">
       <PackagePath>hostpolicy.dll</PackagePath>
-      <Modified>2025-06-12T00:25:40.000</Modified>
+      <Modified>2025-07-15T17:56:50.000</Modified>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\mscordaccore.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\mscordaccore.dll">
       <PackagePath>mscordaccore.dll</PackagePath>
-      <Modified>2025-06-12T00:17:40.000</Modified>
+      <Modified>2025-07-15T17:48:44.000</Modified>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\mscordaccore_amd64_amd64_8.0.1825.31117.dll">
-      <PackagePath>mscordaccore_amd64_amd64_8.0.1825.31117.dll</PackagePath>
-      <Modified>2025-06-12T00:17:40.000</Modified>
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\mscordaccore_amd64_amd64_8.0.1925.36514.dll">
+      <PackagePath>mscordaccore_amd64_amd64_8.0.1925.36514.dll</PackagePath>
+      <Modified>2025-07-15T17:48:44.000</Modified>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\mscordbi.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\mscordbi.dll">
       <PackagePath>mscordbi.dll</PackagePath>
-      <Modified>2025-06-12T00:18:22.000</Modified>
+      <Modified>2025-07-15T17:49:34.000</Modified>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\mscorrc.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\mscorrc.dll">
       <PackagePath>mscorrc.dll</PackagePath>
-      <Modified>2025-06-12T00:15:16.000</Modified>
+      <Modified>2025-07-15T17:46:12.000</Modified>
     </AppxPackagedFile>
-    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.18\runtimes\win-x64\native\msquic.dll">
+    <AppxPackagedFile Include="C:\Users\Dame\.nuget\packages\microsoft.netcore.app.runtime.win-x64\8.0.19\runtimes\win-x64\native\msquic.dll">
       <PackagePath>msquic.dll</PackagePath>
       <Modified>2025-03-03T22:23:18.000</Modified>
     </AppxPackagedFile>
@@ -119,139 +119,139 @@
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\linked\System.ComponentModel.dll">
       <PackagePath>System.ComponentModel.dll</PackagePath>
-      <Modified>2025-08-12T12:21:39.682</Modified>
+      <Modified>2025-08-20T08:15:54.518</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\linked\System.dll">
       <PackagePath>System.dll</PackagePath>
-      <Modified>2025-08-12T12:21:39.842</Modified>
+      <Modified>2025-08-20T08:15:54.699</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\CommunityToolkit.Mvvm.dll">
       <PackagePath>CommunityToolkit.Mvvm.dll</PackagePath>
-      <Modified>2025-08-12T12:21:41.838</Modified>
+      <Modified>2025-08-20T08:15:56.626</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\Microsoft.InteractiveExperiences.Projection.dll">
       <PackagePath>Microsoft.InteractiveExperiences.Projection.dll</PackagePath>
-      <Modified>2025-08-12T12:21:41.943</Modified>
+      <Modified>2025-08-20T08:15:56.722</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\Microsoft.WinUI.dll">
       <PackagePath>Microsoft.WinUI.dll</PackagePath>
-      <Modified>2025-08-12T12:21:42.315</Modified>
+      <Modified>2025-08-20T08:15:57.089</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\HGEngineGUI.dll">
       <PackagePath>HGEngineGUI.dll</PackagePath>
-      <Modified>2025-08-12T12:21:42.525</Modified>
+      <Modified>2025-08-20T08:15:57.301</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.Collections.Concurrent.dll">
       <PackagePath>System.Collections.Concurrent.dll</PackagePath>
-      <Modified>2025-08-12T12:21:42.616</Modified>
+      <Modified>2025-08-20T08:15:57.398</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.Collections.Immutable.dll">
       <PackagePath>System.Collections.Immutable.dll</PackagePath>
-      <Modified>2025-08-12T12:21:42.712</Modified>
+      <Modified>2025-08-20T08:15:57.485</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.Collections.dll">
       <PackagePath>System.Collections.dll</PackagePath>
-      <Modified>2025-08-12T12:21:42.788</Modified>
+      <Modified>2025-08-20T08:15:57.573</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.ComponentModel.Primitives.dll">
       <PackagePath>System.ComponentModel.Primitives.dll</PackagePath>
-      <Modified>2025-08-12T12:21:42.866</Modified>
+      <Modified>2025-08-20T08:15:57.663</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.ComponentModel.TypeConverter.dll">
       <PackagePath>System.ComponentModel.TypeConverter.dll</PackagePath>
-      <Modified>2025-08-12T12:21:42.946</Modified>
+      <Modified>2025-08-20T08:15:57.744</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.Diagnostics.StackTrace.dll">
       <PackagePath>System.Diagnostics.StackTrace.dll</PackagePath>
-      <Modified>2025-08-12T12:21:43.021</Modified>
+      <Modified>2025-08-20T08:15:57.819</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.IO.Compression.dll">
       <PackagePath>System.IO.Compression.dll</PackagePath>
-      <Modified>2025-08-12T12:21:43.110</Modified>
+      <Modified>2025-08-20T08:15:57.908</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.IO.FileSystem.Watcher.dll">
       <PackagePath>System.IO.FileSystem.Watcher.dll</PackagePath>
-      <Modified>2025-08-12T12:21:43.199</Modified>
+      <Modified>2025-08-20T08:15:57.999</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.IO.MemoryMappedFiles.dll">
       <PackagePath>System.IO.MemoryMappedFiles.dll</PackagePath>
-      <Modified>2025-08-12T12:21:43.289</Modified>
+      <Modified>2025-08-20T08:15:58.093</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.Linq.Expressions.dll">
       <PackagePath>System.Linq.Expressions.dll</PackagePath>
-      <Modified>2025-08-12T12:21:43.371</Modified>
+      <Modified>2025-08-20T08:15:58.185</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.Linq.dll">
       <PackagePath>System.Linq.dll</PackagePath>
-      <Modified>2025-08-12T12:21:43.469</Modified>
+      <Modified>2025-08-20T08:15:58.287</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.ObjectModel.dll">
       <PackagePath>System.ObjectModel.dll</PackagePath>
-      <Modified>2025-08-12T12:21:43.553</Modified>
+      <Modified>2025-08-20T08:15:58.367</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.Private.CoreLib.dll">
       <PackagePath>System.Private.CoreLib.dll</PackagePath>
-      <Modified>2025-08-12T12:21:45.154</Modified>
+      <Modified>2025-08-20T08:16:00.043</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.Private.Uri.dll">
       <PackagePath>System.Private.Uri.dll</PackagePath>
-      <Modified>2025-08-12T12:21:45.306</Modified>
+      <Modified>2025-08-20T08:16:00.180</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.Reflection.Metadata.dll">
       <PackagePath>System.Reflection.Metadata.dll</PackagePath>
-      <Modified>2025-08-12T12:21:45.434</Modified>
+      <Modified>2025-08-20T08:16:00.310</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.Runtime.InteropServices.dll">
       <PackagePath>System.Runtime.InteropServices.dll</PackagePath>
-      <Modified>2025-08-12T12:21:45.533</Modified>
+      <Modified>2025-08-20T08:16:00.400</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.Security.Cryptography.dll">
       <PackagePath>System.Security.Cryptography.dll</PackagePath>
-      <Modified>2025-08-12T12:21:45.636</Modified>
+      <Modified>2025-08-20T08:16:00.496</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\System.Text.RegularExpressions.dll">
       <PackagePath>System.Text.RegularExpressions.dll</PackagePath>
-      <Modified>2025-08-12T12:21:45.912</Modified>
+      <Modified>2025-08-20T08:16:00.787</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\Microsoft.Windows.SDK.NET.dll">
       <PackagePath>Microsoft.Windows.SDK.NET.dll</PackagePath>
-      <Modified>2025-08-12T12:21:46.088</Modified>
+      <Modified>2025-08-20T08:16:00.981</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\R2R\WinRT.Runtime.dll">
       <PackagePath>WinRT.Runtime.dll</PackagePath>
-      <Modified>2025-08-12T12:21:46.460</Modified>
+      <Modified>2025-08-20T08:16:01.370</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\obj\x64\Release\net8.0-windows10.0.19041.0\win-x64\HGEngineGUI.deps.json">
       <PackagePath>HGEngineGUI.deps.json</PackagePath>
-      <Modified>2025-08-12T12:21:46.500</Modified>
+      <Modified>2025-08-20T04:21:07.820</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\Assets\LockScreenLogo.scale-200.png">
       <PackagePath>Assets\LockScreenLogo.scale-200.png</PackagePath>
-      <Modified>2025-08-08T10:22:50.723</Modified>
+      <Modified>2025-08-12T22:49:17.000</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\Assets\SplashScreen.scale-200.png">
       <PackagePath>Assets\SplashScreen.scale-200.png</PackagePath>
-      <Modified>2025-08-08T10:22:50.725</Modified>
+      <Modified>2025-08-12T22:49:17.000</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\Assets\Square150x150Logo.scale-200.png">
       <PackagePath>Assets\Square150x150Logo.scale-200.png</PackagePath>
-      <Modified>2025-08-08T10:22:50.726</Modified>
+      <Modified>2025-08-12T22:49:17.000</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\Assets\Square44x44Logo.scale-200.png">
       <PackagePath>Assets\Square44x44Logo.scale-200.png</PackagePath>
-      <Modified>2025-08-08T10:22:50.726</Modified>
+      <Modified>2025-08-12T22:49:17.000</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\Assets\Square44x44Logo.targetsize-24_altform-unplated.png">
       <PackagePath>Assets\Square44x44Logo.targetsize-24_altform-unplated.png</PackagePath>
-      <Modified>2025-08-08T10:22:50.727</Modified>
+      <Modified>2025-08-12T22:49:17.000</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\Assets\StoreLogo.png">
       <PackagePath>Assets\StoreLogo.png</PackagePath>
-      <Modified>2025-08-08T10:22:50.728</Modified>
+      <Modified>2025-08-12T22:49:17.000</Modified>
     </AppxPackagedFile>
     <AppxPackagedFile Include="C:\Users\Dame\Documents\HGEngineGUI\Assets\Wide310x150Logo.scale-200.png">
       <PackagePath>Assets\Wide310x150Logo.scale-200.png</PackagePath>
-      <Modified>2025-08-08T10:22:50.730</Modified>
+      <Modified>2025-08-12T22:49:17.000</Modified>
     </AppxPackagedFile>
   </ItemGroup>
   <ItemGroup>
