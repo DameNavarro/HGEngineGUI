@@ -12,7 +12,7 @@ GUI editor for the HG Engine project. It provides a modern Windows app to browse
   - **Overview (fully editable)**: Types, Base Stats, EV yields, Abilities (1/2), Hidden Ability, Egg Groups, Growth Rate, Gender Ratio, Catch Rate, Base Exp, Egg Cycles, Friendship, Run Chance, Pokédex Classification, Pokédex Entry (multiline), Dex Height, Dex Weight.
   - **TM/HM**: Filterable list, Preview and Save to `armips/data/tmlearnset.txt`.
   - **Tutor Moves**: Filterable list, Preview and Save to `tutordata.txt`.
-  - **Level‑up, Evolutions, Egg Moves**: Summaries are displayed; Preview/Save are available. (These were simplified to ensure stability in packaged builds.)
+  - **Level‑up, Evolutions, Egg Moves**: Summaries are displayed; Preview/Save are available.
 
 - **Trainers editor**
   - Stable detail layout including Moves, Nature, Form, Ball, Shiny Lock, PP, Nickname.
@@ -36,12 +36,7 @@ GUI editor for the HG Engine project. It provides a modern Windows app to browse
 ### Install (packaged MSIX)
 
 1. Download the release `.msix`/`.msixbundle` and the accompanying `.cer` (test certificate) if provided.
-2. Install the certificate:
-   - Double‑click the `.cer` → Install Certificate → Local Machine → Place in store → Trusted People.
-   - Repeat for the Trusted Root Certification Authorities store if required by your system.
-   - Alternatively, use your organization’s signing certificate and skip this step.
-3. Install the app: double‑click the `.msix`/`.msixbundle` and follow the prompt.
-4. Optional: If your release includes `install.ps1`/`install.bat`, you can run `install.bat` to import the cert and install in one step.
+2. Release includes `install.ps1`/`install.bat`, you can run `install.bat` to import the cert and install in one step.
 
 ### Build from source
 
