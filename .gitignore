@@ -1,0 +1,83 @@
+# ----- OS / Editor cruft -----
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.idea/
+.fleet/
+.vscode/
+
+# ----- Visual Studio / .NET build outputs -----
+bin/
+obj/
+.vs/
+TestResults/
+artifacts/
+packages/
+
+# User-specific files
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.csproj.user
+*.pubxml.user
+Properties/PublishProfiles/*.pubxml.user
+
+# Symbols / logs / caches
+*.pdb
+*.log
+*.tmp
+*.temp
+*.cache
+Logs/
+logs/
+
+# NuGet
+*.nupkg
+*.snupkg
+*.nuspec
+
+# Coverage and test tooling
+coverage/
+coverage.*
+.coverage
+.nyc_output/
+
+# ----- LLM tooling & artifacts -----
+.cursor/
+.cursorignore
+.cursorrules
+.aider*
+.chat/
+.llm/
+.anthropic/
+.claude/
+.openai/
+conversations/
+conversation*/
+summaries/
+Conversation_Summary.md
+*.chat.md
+*.chat.txt
+prompts/
+Prompts/
+*.prompt.md
+*.prompt.txt
+
+# Windows app packaging outputs
+AppPackages/
+BundleArtifacts/
+*.appx
+*.appxbundle
+*.appxupload
+*.msix
+*.msixbundle
+*.msixupload
+
+# Misc
+*.swp
+*.swo
+*.bak
+
