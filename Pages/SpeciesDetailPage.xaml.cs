@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
+using System.IO;
 
 namespace HGEngineGUI.Pages
 {
@@ -37,9 +38,30 @@ namespace HGEngineGUI.Pages
             InitializeComponent();
         }
 
-        private void OnLevelUpListLoaded(object sender, RoutedEventArgs e)
+        private void OnLevelUpListLoaded(object sender, RoutedEventArgs e) { }
+
+        private void RenderLevelUpStack()
         {
-            try { (LevelUpList as ItemsControl).ItemsSource = null; (LevelUpList as ItemsControl).ItemsSource = _levelUpModel; } catch { }
+            if (LevelUpStack == null) return;
+            LevelUpStack.Children.Clear();
+            foreach (var row in _levelUpModel)
+            {
+                var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Padding = new Thickness(8) };
+                var levelBox = new TextBox { Header = "Level", Width = 120, Text = row.Level.ToString() };
+                levelBox.TextChanging += (tb, args) => { if (int.TryParse(levelBox.Text, out var lv)) row.Level = lv; };
+                var moveCombo = new ComboBox { Width = 320, IsEditable = true, PlaceholderText = "MOVE_*" };
+                moveCombo.ItemsSource = Data.HGParsers.MoveMacros;
+                if (!string.IsNullOrWhiteSpace(row.Move) && Data.HGParsers.MoveMacros.Contains(row.Move)) moveCombo.SelectedItem = row.Move;
+                moveCombo.Text = row.Move;
+                moveCombo.SelectionChanged += (s, e) => { row.Move = (moveCombo.SelectedItem as string) ?? (moveCombo.Text ?? string.Empty); };
+                moveCombo.LostFocus += (s, e) => { row.Move = moveCombo.Text ?? string.Empty; };
+                var remove = new Button { Content = "Remove" };
+                remove.Click += (s, e) => { _levelUpModel.Remove(row); RenderLevelUpStack(); };
+                panel.Children.Add(levelBox);
+                panel.Children.Add(moveCombo);
+                panel.Children.Add(remove);
+                LevelUpStack.Children.Add(panel);
+            }
         }
 
         private void OnEvolutionListLoaded(object sender, RoutedEventArgs e) { }
@@ -166,9 +188,56 @@ namespace HGEngineGUI.Pages
             try { RenderEvolutionsStack(); } catch (Exception ex) { StatusText.Text = ex.Message; }
         }
 
-        private void OnEggMovesListLoaded(object sender, RoutedEventArgs e)
+        private void SyncLevelUpFromUi()
         {
-            try { (EggMovesList as ItemsControl).ItemsSource = null; (EggMovesList as ItemsControl).ItemsSource = _eggModel; } catch { }
+            _levelUpModel = _levelUpModel
+                .Select(m => new LevelUpEntry { Level = m.Level, Move = (m.Move ?? string.Empty).Trim() })
+                .OrderBy(m => m.Level)
+                .ToList();
+        }
+
+        private void SyncEggFromUi()
+        {
+            _eggModel = _eggModel
+                .Select(m => new EggMoveEntry { Move = (m.Move ?? string.Empty).Trim() })
+                .Where(m => !string.IsNullOrWhiteSpace(m.Move))
+                .ToList();
+        }
+
+        private void SyncEvolutionsFromUi()
+        {
+            _evoModel = _evoModel
+                .Select(e => new EvolutionEntry
+                {
+                    Method = (e.Method ?? string.Empty).Trim(),
+                    Param = e.Param,
+                    Target = (e.Target ?? string.Empty).Trim()
+                })
+                .ToList();
+        }
+        private void OnEggMovesListLoaded(object sender, RoutedEventArgs e) { }
+
+        private void RenderEggStack()
+        {
+            if (EggStack == null) return;
+            EggStack.Children.Clear();
+            foreach (var row in _eggModel)
+            {
+                var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Padding = new Thickness(8) };
+                var moveCombo = new ComboBox { Width = 320, IsEditable = true, PlaceholderText = "MOVE_*" };
+                moveCombo.ItemsSource = Data.HGParsers.MoveMacros;
+                if (!string.IsNullOrWhiteSpace(row.Move) && Data.HGParsers.MoveMacros.Contains(row.Move)) moveCombo.SelectedItem = row.Move;
+                moveCombo.Text = row.Move;
+                moveCombo.SelectionChanged += (s, e) => { row.Move = (moveCombo.SelectedItem as string) ?? (moveCombo.Text ?? string.Empty); };
+                moveCombo.LostFocus += (s, e) => { row.Move = moveCombo.Text ?? string.Empty; };
+
+                var remove = new Button { Content = "Remove" };
+                remove.Click += (s, e) => { _eggModel.Remove(row); RenderEggStack(); };
+
+                panel.Children.Add(moveCombo);
+                panel.Children.Add(remove);
+                EggStack.Children.Add(panel);
+            }
         }
 
         // Ensure initial move text renders even if SelectedItem isn't resolved yet
@@ -253,13 +322,13 @@ namespace HGEngineGUI.Pages
             MoveOptions = Data.HGParsers.MoveMacros.ToList();
             _levelUp = Data.HGParsers.LevelUpMoves.ToList();
             _levelUpModel = _levelUp.Select(m => new LevelUpEntry { Level = m.level, Move = m.move }).ToList();
-            LevelUpList.ItemsSource = _levelUpModel;
+            RenderLevelUpStack();
             _evolutions = Data.HGParsers.Evolutions.ToList();
             _evoModel = _evolutions.Select(e => new EvolutionEntry { Method = e.method, Param = e.param, Target = e.target }).ToList();
             RenderEvolutionsStack();
             _egg = Data.HGParsers.EggMoves.ToList();
             _eggModel = _egg.Select(m => new EggMoveEntry { Move = m }).ToList();
-            EggMovesList.ItemsSource = _eggModel;
+            RenderEggStack();
             try { StatusText.Text = $"Loaded: {_levelUpModel.Count} level-up, {_evoModel.Count} evolutions, {_eggModel.Count} egg moves."; } catch { }
             // Tutor preselection
             _tutorSelected = new HashSet<string>(Data.HGParsers.TutorSelectedForSpecies);
@@ -346,7 +415,7 @@ namespace HGEngineGUI.Pages
                 {
                     _levelUpModel.Add(new LevelUpEntry { Level = lvl, Move = move });
                     _levelUpModel = _levelUpModel.OrderBy(x => x.Level).ToList();
-                    LevelUpList.ItemsSource = null; LevelUpList.ItemsSource = _levelUpModel;
+                    RenderLevelUpStack();
                 }
             }
         }
@@ -359,6 +428,7 @@ namespace HGEngineGUI.Pages
         private async void OnSaveLevelUp(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
             if (_species == null) return;
+            SyncLevelUpFromUi();
             var entries = _levelUpModel.Select(m => (m.Level, m.Move)).OrderBy(m => m.Level).ToList();
             var errors = ValidateLevelUp(entries);
             if (errors.Count > 0)
@@ -366,12 +436,16 @@ namespace HGEngineGUI.Pages
                 await ShowDiffDialog(string.Join("\n", errors), "Fix validation errors");
                 return;
             }
+            var path = Data.HGParsers.PathLevelUp ?? Path.Combine(ProjectContext.RootPath ?? string.Empty, "armips", "data", "levelupdata.s");
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) { try { StatusText.Text = $"File not found: levelupdata.s"; } catch { } return; }
             await Data.HGSerializers.SaveLevelUpAsync(_species.Name, entries);
+            try { StatusText.Text = $"Saved level-up moves ({entries.Count})"; } catch { }
         }
 
         private async void OnPreviewLevelUp(object sender, RoutedEventArgs e)
         {
             if (_species == null) return;
+            SyncLevelUpFromUi();
             var entries = _levelUpModel.Select(m => (m.Level, m.Move)).OrderBy(m => m.Level).ToList();
             var diff = await Data.HGSerializers.PreviewLevelUpAsync(_species.Name, entries);
             await ShowDiffDialog(diff, "levelupdata.s");
@@ -396,7 +470,7 @@ namespace HGEngineGUI.Pages
                 if (!string.IsNullOrWhiteSpace(text))
                 {
                     _eggModel.Add(new EggMoveEntry { Move = text });
-                    EggMovesList.ItemsSource = null; EggMovesList.ItemsSource = _eggModel;
+                    RenderEggStack();
                 }
             }
         }
@@ -409,6 +483,7 @@ namespace HGEngineGUI.Pages
         private async void OnSaveEggMoves(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
             if (_species == null) return;
+            SyncEggFromUi();
             var moves = _eggModel.Select(m => m.Move).ToList();
             var errors = ValidateEgg(moves);
             if (errors.Count > 0)
@@ -416,12 +491,16 @@ namespace HGEngineGUI.Pages
                 await ShowDiffDialog(string.Join("\n", errors), "Fix validation errors");
                 return;
             }
+            var path = Data.HGParsers.PathEgg ?? Path.Combine(ProjectContext.RootPath ?? string.Empty, "armips", "data", "eggmoves.s");
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) { try { StatusText.Text = $"File not found: eggmoves.s"; } catch { } return; }
             await Data.HGSerializers.SaveEggMovesAsync(_species.Name, moves);
+            try { StatusText.Text = $"Saved egg moves ({moves.Count})"; } catch { }
         }
 
         private async void OnPreviewEggMoves(object sender, RoutedEventArgs e)
         {
             if (_species == null) return;
+            SyncEggFromUi();
             var diff = await Data.HGSerializers.PreviewEggMovesAsync(_species.Name, _eggModel.Select(m=>m.Move).ToList());
             await ShowDiffDialog(diff, "eggmoves.s");
         }
@@ -482,7 +561,7 @@ namespace HGEngineGUI.Pages
             if (sender is FrameworkElement fe && fe.DataContext is LevelUpEntry row)
             {
                 _levelUpModel.Remove(row);
-                (LevelUpList as ItemsControl).ItemsSource = null; (LevelUpList as ItemsControl).ItemsSource = _levelUpModel;
+                RenderLevelUpStack();
             }
         }
 
@@ -491,7 +570,7 @@ namespace HGEngineGUI.Pages
             if (sender is FrameworkElement fe && fe.DataContext is EggMoveEntry row)
             {
                 _eggModel.Remove(row);
-                (EggMovesList as ItemsControl).ItemsSource = null; (EggMovesList as ItemsControl).ItemsSource = _eggModel;
+                RenderEggStack();
             }
         }
 
@@ -507,6 +586,7 @@ namespace HGEngineGUI.Pages
         private async void OnSaveEvolutions(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
             if (_species == null) return;
+            SyncEvolutionsFromUi();
             var current = _evoModel.Select(e => (e.Method, e.Param, e.Target)).ToList();
             var errors = ValidateEvolutions(current);
             if (errors.Count > 0)
@@ -514,12 +594,16 @@ namespace HGEngineGUI.Pages
                 await ShowDiffDialog(string.Join("\n", errors), "Fix validation errors");
                 return;
             }
+            var path = Data.HGParsers.PathEvo ?? Path.Combine(ProjectContext.RootPath ?? string.Empty, "armips", "data", "evodata.s");
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) { try { StatusText.Text = $"File not found: evodata.s"; } catch { } return; }
             await Data.HGSerializers.SaveEvolutionsAsync(_species.Name, current);
+            try { StatusText.Text = $"Saved evolutions ({current.Count})"; } catch { }
         }
 
         private async void OnPreviewEvolutions(object sender, RoutedEventArgs e)
         {
             if (_species == null) return;
+            SyncEvolutionsFromUi();
             var diff = await Data.HGSerializers.PreviewEvolutionsAsync(_species.Name, _evoModel.Select(e => (e.Method, e.Param, e.Target)).ToList());
             await ShowDiffDialog(diff, "evodata.s");
         }
@@ -528,7 +612,10 @@ namespace HGEngineGUI.Pages
         {
             if (_species == null) return;
             var selected = TmHmList.SelectedItems.Cast<string>().ToList();
+            var path = Data.HGParsers.PathTm ?? Path.Combine(ProjectContext.RootPath ?? string.Empty, "armips", "data", "tmlearnset.txt");
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) { try { StatusText.Text = $"File not found: tmlearnset.txt"; } catch { } return; }
             await Data.HGSerializers.SaveTmHmForSpeciesAsync(_species.Name, selected);
+            try { StatusText.Text = $"Saved TM/HM selections ({selected.Count})"; } catch { }
         }
 
         private async void OnPreviewTmHm(object sender, RoutedEventArgs e)
@@ -557,7 +644,10 @@ namespace HGEngineGUI.Pages
                     return (tutor, move, cost);
                 })
                 .ToList();
+            var path = Data.HGParsers.PathTutor ?? Path.Combine(ProjectContext.RootPath ?? string.Empty, "armips", "data", "tutordata.txt");
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) { try { StatusText.Text = $"File not found: tutordata.txt"; } catch { } return; }
             await Data.HGSerializers.SaveTutorsForSpeciesAsync(_species.Name, selected);
+            try { StatusText.Text = $"Saved tutors ({selected.Count})"; } catch { }
         }
 
         private async void OnPreviewTutors(object sender, RoutedEventArgs e)
@@ -585,6 +675,8 @@ namespace HGEngineGUI.Pages
         {
             if (_species == null) return;
             var ov = CollectOverviewFromUi();
+            var path = Data.HGParsers.PathMondata ?? Path.Combine(ProjectContext.RootPath ?? string.Empty, "armips", "data", "mondata.s");
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) { try { StatusText.Text = $"File not found: mondata.s"; } catch { } return; }
             await Data.HGSerializers.SaveOverviewAsync(_species.Name, ov);
             // Also persist Hidden Ability via HiddenAbilityTable.c
             var hidden = (AbilityHiddenBox.SelectedItem as string) ?? ov.AbilityHidden;
@@ -592,6 +684,7 @@ namespace HGEngineGUI.Pages
             {
                 await Data.HGSerializers.SaveHiddenAbilityAsync(_species.Name, hidden);
             }
+            try { StatusText.Text = $"Saved overview"; } catch { }
         }
 
         private async void OnPreviewOverview(object sender, RoutedEventArgs e)

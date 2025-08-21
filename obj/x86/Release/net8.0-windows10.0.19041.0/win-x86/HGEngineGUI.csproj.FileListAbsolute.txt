@@ -220,7 +220,6 @@ C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\w
 C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\hostfxr.dll
 C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\hostpolicy.dll
 C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\mscordaccore.dll
-C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\mscordaccore_x86_x86_8.0.1825.31117.dll
 C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\mscordbi.dll
 C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\mscorrc.dll
 C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\msquic.dll
@@ -285,3 +284,4 @@ C:\Users\Dame\Documents\HGEngineGUI\obj\x86\Release\net8.0-windows10.0.19041.0\w
 C:\Users\Dame\Documents\HGEngineGUI\obj\x86\Release\net8.0-windows10.0.19041.0\win-x86\MultipleQualifiersPerDimensionFound.txt
 C:\Users\Dame\Documents\HGEngineGUI\obj\x86\Release\net8.0-windows10.0.19041.0\win-x86\HGEngineGUI.genpublishdeps.cache
 C:\Users\Dame\Documents\HGEngineGUI\obj\x86\Release\net8.0-windows10.0.19041.0\win-x86\ProjectArchitectures.txt
+C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\mscordaccore_x86_x86_8.0.1925.36514.dll

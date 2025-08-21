@@ -61,93 +61,40 @@
                 <AppBarButton Icon="Refresh" Label="Restore Backup" Click="OnRestoreTrainerBackup"/>
             </CommandBar>
 
-            <ListView x:Name="PartyList"
-                      ScrollViewer.VerticalScrollBarVisibility="Auto"
-                      ScrollViewer.VerticalScrollMode="Auto"
-                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                      ScrollViewer.HorizontalScrollMode="Enabled">
-                <ListView.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Spacing="6" Padding="4">
-                            <Grid ColumnDefinitions="Auto,*,*,*,*,*,*,*" ColumnSpacing="12">
-                                <StackPanel Grid.Column="0" Width="72">
-                                    <TextBlock Text="Slot" FontSize="12"/>
-                                    <TextBox Width="72" Text="{Binding Slot, Mode=TwoWay}"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="1" Width="220">
-                                    <TextBlock Text="Species" FontSize="12"/>
-                                    <TextBox Text="{Binding Species, Mode=TwoWay}"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="2" Width="100">
-                                    <TextBlock Text="Level" FontSize="12"/>
-                                    <TextBox Text="{Binding Level, Mode=TwoWay}"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="3" Width="100">
-                                    <TextBlock Text="IVs" FontSize="12"/>
-                                    <TextBox Text="{Binding IVs, Mode=TwoWay}"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="4" Width="120">
-                                    <TextBlock Text="AbilitySlot" FontSize="12"/>
-                                    <TextBox Text="{Binding AbilitySlot, Mode=TwoWay}"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="5" Width="240">
-                                    <TextBlock Text="Item" FontSize="12"/>
-                                    <ComboBox ItemsSource="{Binding ElementName=Root, Path=ItemMacroList, Mode=OneTime}" SelectedItem="{Binding Item, Mode=TwoWay}" IsEditable="True"/>
-                                </StackPanel>
-                            </Grid>
-            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
-                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="Move 1" FontSize="12"/>
-                                    <ComboBox ItemsSource="{Binding ElementName=Root, Path=MoveMacroList, Mode=OneTime}" SelectedItem="{Binding Move1, Mode=TwoWay}" IsEditable="True"/>
-                                </StackPanel>
-                <StackPanel Grid.Column="1">
-                                    <TextBlock Text="Move 2" FontSize="12"/>
-                                    <ComboBox ItemsSource="{Binding ElementName=Root, Path=MoveMacroList, Mode=OneTime}" SelectedItem="{Binding Move2, Mode=TwoWay}" IsEditable="True"/>
-                                </StackPanel>
-                <StackPanel Grid.Column="2">
-                                    <TextBlock Text="Move 3" FontSize="12"/>
-                                    <ComboBox ItemsSource="{Binding ElementName=Root, Path=MoveMacroList, Mode=OneTime}" SelectedItem="{Binding Move3, Mode=TwoWay}" IsEditable="True"/>
-                                </StackPanel>
-                <StackPanel Grid.Column="3">
-                                    <TextBlock Text="Move 4" FontSize="12"/>
-                                    <ComboBox ItemsSource="{Binding ElementName=Root, Path=MoveMacroList, Mode=OneTime}" SelectedItem="{Binding Move4, Mode=TwoWay}" IsEditable="True"/>
-                                </StackPanel>
-                            </Grid>
-            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
-                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="Nature" FontSize="12"/>
-                                    <TextBox Text="{Binding Nature, Mode=TwoWay}"/>
-                                </StackPanel>
-                <StackPanel Grid.Column="1">
-                                    <TextBlock Text="Form" FontSize="12"/>
-                                    <TextBox Text="{Binding Form, Mode=TwoWay}"/>
-                                </StackPanel>
-                <StackPanel Grid.Column="2">
-                                    <TextBlock Text="Ball" FontSize="12"/>
-                                    <TextBox Text="{Binding Ball, Mode=TwoWay}"/>
-                                </StackPanel>
-                <StackPanel Grid.Column="3">
-                                     <TextBlock Text="Shiny Lock" FontSize="12"/>
-                                     <CheckBox IsChecked="{Binding ShinyLock, Mode=TwoWay}"/>
-                                 </StackPanel>
-                            </Grid>
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="PP (comma-separated)" FontSize="12"/>
-                                    <TextBox Text="{Binding PP, Mode=TwoWay}"/>
-                                </StackPanel>
-                <StackPanel Grid.Column="1">
-                                    <TextBlock Text="Nickname" FontSize="12"/>
-                                    <TextBox Text="{Binding Nickname, Mode=TwoWay}"/>
-                                </StackPanel>
-                            </Grid>
-                        </StackPanel>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto" HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Enabled">
+                <StackPanel x:Name="PartyStack" Spacing="8"/>
+            </ScrollViewer>
+
             <CommandBar>
                 <AppBarButton Icon="PreviewLink" Label="Preview" Click="OnPreviewParty"/>
                 <AppBarButton Icon="Save" Label="Save Party" Click="OnSaveParty"/>
+                <AppBarSeparator/>
+                <AppBarButton Label="New Row" Click="OnClonePartyRow">
+                    <AppBarButton.Icon>
+                        <FontIcon Glyph="+"/>
+                    </AppBarButton.Icon>
+                </AppBarButton>
+                <AppBarButton Label="Move Up" Click="OnMovePartyRowUp">
+                    <AppBarButton.Icon>
+                        <FontIcon Glyph="↑"/>
+                    </AppBarButton.Icon>
+                </AppBarButton>
+                <AppBarButton Label="Move Down" Click="OnMovePartyRowDown">
+                    <AppBarButton.Icon>
+                        <FontIcon Glyph="↓"/>
+                    </AppBarButton.Icon>
+                </AppBarButton>
+                <AppBarButton Label="Delete Row" Click="OnDeletePartyRow">
+                    <AppBarButton.Icon>
+                        <SymbolIcon Symbol="Delete"/>
+                    </AppBarButton.Icon>
+                </AppBarButton>
+                <AppBarSeparator/>
+                <AppBarButton Label="Open trainers.s" Click="OnOpenTrainersFile">
+                    <AppBarButton.Icon>
+                        <SymbolIcon Symbol="OpenFile"/>
+                    </AppBarButton.Icon>
+                </AppBarButton>
             </CommandBar>
             </StackPanel>
         </ScrollViewer>

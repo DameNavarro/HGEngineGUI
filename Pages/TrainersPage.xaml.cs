@@ -13,6 +13,7 @@ namespace HGEngineGUI.Pages
         private List<PartyRow> _partyRows = new();
         public List<string> ItemMacroList { get; private set; } = new();
         public List<string> MoveMacroList { get; private set; } = new();
+        public List<string> SpeciesMacroList { get; private set; } = new();
 
         public TrainersPage()
         {
@@ -55,6 +56,7 @@ namespace HGEngineGUI.Pages
                 Item4Combo.ItemsSource = ItemMacroList;
 
                 MoveMacroList = Data.HGParsers.MoveMacros.ToList();
+                SpeciesMacroList = Data.HGParsers.SpeciesMacroNames.ToList();
             }
             catch (Exception ex)
             {
@@ -116,7 +118,7 @@ namespace HGEngineGUI.Pages
                         Nickname = m.Nickname,
                         PP = m.PP
                     }).ToList();
-                    PartyList.ItemsSource = _partyRows;
+                    RenderPartyStack();
 
                     if (header != null)
                     {
@@ -151,10 +153,227 @@ namespace HGEngineGUI.Pages
         {
             if (TrainerList.SelectedItem is string s && int.TryParse(s.Split(':')[0], out var id))
             {
-                // For now support saving basic fields (slot, species, level, ivs, abilityslot)
+                SyncPartyFromUi();
+                // Validate before saving
+                var errors = ValidateParty(_partyRows);
+                if (errors.Count > 0)
+                {
+                    var dlg = new ContentDialog { Title = "Fix validation errors", Content = string.Join("\n", errors), PrimaryButtonText = "Close", XamlRoot = this.XamlRoot };
+                    await dlg.ShowAsync();
+                    return;
+                }
+                // Save party
                 await Data.HGSerializers.SaveTrainerPartyAsync(id, _partyRows);
                 await LoadUpdatedAsync();
             }
+        }
+
+        private void RenderPartyStack()
+        {
+            if (PartyStack == null) return;
+            PartyStack.Children.Clear();
+            foreach (var row in _partyRows.OrderBy(r => r.Slot))
+            {
+                var container = new StackPanel { Spacing = 6, Padding = new Microsoft.UI.Xaml.Thickness(4) };
+
+                var topGrid = new Grid { ColumnSpacing = 12 };
+                topGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new Microsoft.UI.Xaml.GridLength(1, Microsoft.UI.Xaml.GridUnitType.Auto) });
+                for (int i = 0; i < 7; i++) topGrid.ColumnDefinitions.Add(new ColumnDefinition());
+
+                var slotStack = new StackPanel { Width = 72 };
+                slotStack.Children.Add(new TextBlock { Text = "Slot", FontSize = 12 });
+                var slotBox = new TextBox { Width = 72, Text = row.Slot.ToString() };
+                slotBox.TextChanging += (s, e) => { if (int.TryParse(slotBox.Text, out var v)) row.Slot = v; };
+                slotStack.Children.Add(slotBox);
+                topGrid.Children.Add(slotStack);
+                Grid.SetColumn(slotStack, 0);
+
+                var speciesStack = new StackPanel { Width = 220 };
+                speciesStack.Children.Add(new TextBlock { Text = "Species", FontSize = 12 });
+                var speciesCombo = new ComboBox { IsEditable = true, ItemsSource = SpeciesMacroList, SelectedItem = row.Species };
+                speciesCombo.SelectionChanged += (s, e) => { row.Species = (speciesCombo.SelectedItem as string) ?? (speciesCombo.Text ?? string.Empty); };
+                speciesCombo.LostFocus += (s, e) => { row.Species = speciesCombo.Text ?? string.Empty; };
+                speciesStack.Children.Add(speciesCombo);
+                topGrid.Children.Add(speciesStack);
+                Grid.SetColumn(speciesStack, 1);
+
+                var levelStack = new StackPanel { Width = 100 };
+                levelStack.Children.Add(new TextBlock { Text = "Level", FontSize = 12 });
+                var levelBox = new TextBox { Text = row.Level.ToString() };
+                levelBox.TextChanging += (s, e) => { if (int.TryParse(levelBox.Text, out var v)) row.Level = v; };
+                levelStack.Children.Add(levelBox);
+                topGrid.Children.Add(levelStack);
+                Grid.SetColumn(levelStack, 2);
+
+                var ivsStack = new StackPanel { Width = 100 };
+                ivsStack.Children.Add(new TextBlock { Text = "IVs", FontSize = 12 });
+                var ivsBox = new TextBox { Text = row.IVs.ToString() };
+                ivsBox.TextChanging += (s, e) => { if (int.TryParse(ivsBox.Text, out var v)) row.IVs = v; };
+                ivsStack.Children.Add(ivsBox);
+                topGrid.Children.Add(ivsStack);
+                Grid.SetColumn(ivsStack, 3);
+
+                var abilityStack = new StackPanel { Width = 120 };
+                abilityStack.Children.Add(new TextBlock { Text = "AbilitySlot", FontSize = 12 });
+                var abilityBox = new TextBox { Text = row.AbilitySlot.ToString() };
+                abilityBox.TextChanging += (s, e) => { if (int.TryParse(abilityBox.Text, out var v)) row.AbilitySlot = v; };
+                abilityStack.Children.Add(abilityBox);
+                topGrid.Children.Add(abilityStack);
+                Grid.SetColumn(abilityStack, 4);
+
+                var itemStack = new StackPanel { Width = 240 };
+                itemStack.Children.Add(new TextBlock { Text = "Item", FontSize = 12 });
+                var itemCombo = new ComboBox { IsEditable = true, ItemsSource = ItemMacroList, SelectedItem = row.Item };
+                itemCombo.SelectionChanged += (s, e) => { row.Item = (itemCombo.SelectedItem as string) ?? (itemCombo.Text ?? string.Empty); };
+                itemCombo.LostFocus += (s, e) => { row.Item = itemCombo.Text ?? string.Empty; };
+                itemStack.Children.Add(itemCombo);
+                topGrid.Children.Add(itemStack);
+                Grid.SetColumn(itemStack, 5);
+
+                container.Children.Add(topGrid);
+
+                var moveGrid = new Grid { ColumnSpacing = 8 };
+                for (int i = 0; i < 4; i++) moveGrid.ColumnDefinitions.Add(new ColumnDefinition());
+                container.Children.Add(moveGrid);
+
+                void AddMove(StackPanel parent, string label, Func<string> getVal, Action<string> setVal)
+                {
+                    parent.Children.Add(new TextBlock { Text = label, FontSize = 12 });
+                    var initial = getVal() ?? string.Empty;
+                    var cb = new ComboBox { IsEditable = true, ItemsSource = MoveMacroList, SelectedItem = initial };
+                    cb.Text = initial;
+                    cb.SelectionChanged += (s, e) => setVal((cb.SelectedItem as string) ?? (cb.Text ?? string.Empty));
+                    cb.LostFocus += (s, e) => setVal(cb.Text ?? string.Empty);
+                    parent.Children.Add(cb);
+                }
+
+                var m1 = new StackPanel(); AddMove(m1, "Move 1", () => row.Move1, v => row.Move1 = v); moveGrid.Children.Add(m1); Grid.SetColumn(m1, 0);
+                var m2 = new StackPanel(); AddMove(m2, "Move 2", () => row.Move2, v => row.Move2 = v); moveGrid.Children.Add(m2); Grid.SetColumn(m2, 1);
+                var m3 = new StackPanel(); AddMove(m3, "Move 3", () => row.Move3, v => row.Move3 = v); moveGrid.Children.Add(m3); Grid.SetColumn(m3, 2);
+                var m4 = new StackPanel(); AddMove(m4, "Move 4", () => row.Move4, v => row.Move4 = v); moveGrid.Children.Add(m4); Grid.SetColumn(m4, 3);
+
+                var miscGrid = new Grid { ColumnSpacing = 8 };
+                for (int i = 0; i < 4; i++) miscGrid.ColumnDefinitions.Add(new ColumnDefinition());
+                var natureStack = new StackPanel(); natureStack.Children.Add(new TextBlock { Text = "Nature", FontSize = 12 }); var natureBox = new TextBox { Text = row.Nature }; natureBox.TextChanging += (s, e) => row.Nature = natureBox.Text; natureStack.Children.Add(natureBox); miscGrid.Children.Add(natureStack); Grid.SetColumn(natureStack, 0);
+                var formStack = new StackPanel(); formStack.Children.Add(new TextBlock { Text = "Form", FontSize = 12 }); var formBox = new TextBox { Text = row.Form.ToString() }; formBox.TextChanging += (s, e) => { if (int.TryParse(formBox.Text, out var v)) row.Form = v; }; formStack.Children.Add(formBox); miscGrid.Children.Add(formStack); Grid.SetColumn(formStack, 1);
+                var ballStack = new StackPanel(); ballStack.Children.Add(new TextBlock { Text = "Ball", FontSize = 12 }); var ballBox = new TextBox { Text = row.Ball }; ballBox.TextChanging += (s, e) => row.Ball = ballBox.Text; ballStack.Children.Add(ballBox); miscGrid.Children.Add(ballStack); Grid.SetColumn(ballStack, 2);
+                var shinyStack = new StackPanel(); shinyStack.Children.Add(new TextBlock { Text = "Shiny Lock", FontSize = 12 }); var shinyBox = new CheckBox { IsChecked = row.ShinyLock }; shinyBox.Checked += (s, e) => row.ShinyLock = true; shinyBox.Unchecked += (s, e) => row.ShinyLock = false; shinyStack.Children.Add(shinyBox); miscGrid.Children.Add(shinyStack); Grid.SetColumn(shinyStack, 3);
+                container.Children.Add(miscGrid);
+
+                var lastGrid = new Grid { ColumnSpacing = 8 };
+                lastGrid.ColumnDefinitions.Add(new ColumnDefinition());
+                lastGrid.ColumnDefinitions.Add(new ColumnDefinition());
+                var ppStack = new StackPanel(); ppStack.Children.Add(new TextBlock { Text = "PP (comma-separated)", FontSize = 12 }); var ppBox = new TextBox { Text = row.PP }; ppBox.TextChanging += (s, e) => row.PP = ppBox.Text; ppStack.Children.Add(ppBox); lastGrid.Children.Add(ppStack); Grid.SetColumn(ppStack, 0);
+                var nickStack = new StackPanel(); nickStack.Children.Add(new TextBlock { Text = "Nickname", FontSize = 12 }); var nickBox = new TextBox { Text = row.Nickname }; nickBox.TextChanging += (s, e) => row.Nickname = nickBox.Text; nickStack.Children.Add(nickBox); lastGrid.Children.Add(nickStack); Grid.SetColumn(nickStack, 1);
+                container.Children.Add(lastGrid);
+
+                PartyStack.Children.Add(container);
+            }
+        }
+
+        private void SyncPartyFromUi()
+        {
+            _partyRows = _partyRows.Select(r => new PartyRow
+            {
+                Slot = r.Slot,
+                Species = (r.Species ?? string.Empty).Trim(),
+                Level = r.Level,
+                IVs = r.IVs,
+                AbilitySlot = r.AbilitySlot,
+                Item = (r.Item ?? string.Empty).Trim(),
+                Move1 = (r.Move1 ?? string.Empty).Trim(),
+                Move2 = (r.Move2 ?? string.Empty).Trim(),
+                Move3 = (r.Move3 ?? string.Empty).Trim(),
+                Move4 = (r.Move4 ?? string.Empty).Trim(),
+                Nature = (r.Nature ?? string.Empty).Trim(),
+                Form = r.Form,
+                Ball = (r.Ball ?? string.Empty).Trim(),
+                ShinyLock = r.ShinyLock,
+                Nickname = r.Nickname ?? string.Empty,
+                PP = r.PP ?? string.Empty
+            }).ToList();
+        }
+
+        // QoL actions for party rows (operate on the last focused row; fallback to first)
+        private PartyRow? GetActivePartyRow() => _partyRows.OrderBy(r => r.Slot).FirstOrDefault();
+
+        private void OnClonePartyRow(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+        {
+            var row = GetActivePartyRow(); if (row == null) return;
+            var clone = new PartyRow
+            {
+                Slot = row.Slot + 1,
+                Species = row.Species,
+                Level = row.Level,
+                IVs = row.IVs,
+                AbilitySlot = row.AbilitySlot,
+                Item = row.Item,
+                Move1 = row.Move1,
+                Move2 = row.Move2,
+                Move3 = row.Move3,
+                Move4 = row.Move4,
+                Nature = row.Nature,
+                Form = row.Form,
+                Ball = row.Ball,
+                ShinyLock = row.ShinyLock,
+                Nickname = row.Nickname,
+                PP = row.PP
+            };
+            _partyRows.Add(clone);
+            RenderPartyStack();
+        }
+
+        private void OnMovePartyRowUp(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+        {
+            var row = GetActivePartyRow(); if (row == null) return;
+            row.Slot = Math.Max(0, row.Slot - 1);
+            RenderPartyStack();
+        }
+
+        private void OnMovePartyRowDown(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+        {
+            var row = GetActivePartyRow(); if (row == null) return;
+            row.Slot = row.Slot + 1;
+            RenderPartyStack();
+        }
+
+        private void OnDeletePartyRow(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+        {
+            var row = GetActivePartyRow(); if (row == null) return;
+            _partyRows.Remove(row);
+            RenderPartyStack();
+        }
+
+        
+
+        private async void OnOpenTrainersFile(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+        {
+            if (ProjectContext.RootPath == null) return;
+            var path = System.IO.Path.Combine(ProjectContext.RootPath, "armips", "data", "trainers", "trainers.s");
+            if (!System.IO.File.Exists(path)) return;
+            try { await Windows.System.Launcher.LaunchUriAsync(new Uri($"file:///{path.Replace("\\", "/")}")); } catch { }
+        }
+
+        private List<string> ValidateParty(List<PartyRow> rows)
+        {
+            var errors = new List<string>();
+            var species = new HashSet<string>(Data.HGParsers.SpeciesMacroNames);
+            var moves = new HashSet<string>(Data.HGParsers.MoveMacros);
+            var items = new HashSet<string>(Data.HGParsers.ItemMacros.Concat(new[] { "ITEM_NONE" }));
+            for (int i = 0; i < rows.Count; i++)
+            {
+                var r = rows[i];
+                if (r.Level < 1 || r.Level > 100) errors.Add($"Row {i}: Level must be 1-100");
+                if (r.IVs < 0 || r.IVs > 31) errors.Add($"Row {i}: IVs must be 0-31");
+                if (r.AbilitySlot < 0 || r.AbilitySlot > 2) errors.Add($"Row {i}: AbilitySlot must be 0-2");
+                if (!species.Contains(r.Species)) errors.Add($"Row {i}: Unknown species");
+                if (!string.IsNullOrWhiteSpace(r.Item) && !items.Contains(r.Item)) errors.Add($"Row {i}: Unknown item");
+                if (!string.IsNullOrWhiteSpace(r.Move1) && !moves.Contains(r.Move1)) errors.Add($"Row {i}: Move1 invalid");
+                if (!string.IsNullOrWhiteSpace(r.Move2) && !moves.Contains(r.Move2)) errors.Add($"Row {i}: Move2 invalid");
+                if (!string.IsNullOrWhiteSpace(r.Move3) && !moves.Contains(r.Move3)) errors.Add($"Row {i}: Move3 invalid");
+                if (!string.IsNullOrWhiteSpace(r.Move4) && !moves.Contains(r.Move4)) errors.Add($"Row {i}: Move4 invalid");
+            }
+            return errors;
         }
 
         private async void OnPreviewParty(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)

@@ -122,22 +122,9 @@
                         <AppBarButton Icon="Save" Label="Save" Click="OnSaveLevelUp"/>
                         <AppBarButton Icon="Page" Label="Preview" Click="OnPreviewLevelUp"/>
                     </CommandBar>
-                    <ItemsControl Grid.Row="1" x:Name="LevelUpList" Loaded="OnLevelUpListLoaded">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal" Spacing="8" Padding="4">
-                                    <TextBox Header="Level" Width="120" Text="{Binding Level, Mode=TwoWay}"/>
-                                    <ComboBox Width="320" IsEditable="True" PlaceholderText="MOVE_*" Loaded="OnMoveComboLoaded" Text="{Binding Move, Mode=TwoWay}"/>
-                                    <Button Content="Remove" Click="OnRemoveLevelUpRow"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto">
+                        <StackPanel x:Name="LevelUpStack"/>
+                    </ScrollViewer>
                 </Grid>
             </TabViewItem>
                         <TabViewItem Header="TM/HM">
@@ -186,21 +173,9 @@
                         <AppBarButton Icon="Save" Label="Save" Click="OnSaveEggMoves"/>
                         <AppBarButton Icon="Page" Label="Preview" Click="OnPreviewEggMoves"/>
                     </CommandBar>
-                    <ItemsControl Grid.Row="1" x:Name="EggMovesList" Loaded="OnEggMovesListLoaded">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal" Spacing="8" Padding="4">
-                                    <ComboBox Width="320" IsEditable="True" PlaceholderText="MOVE_*" Loaded="OnMoveComboLoaded" Text="{Binding Move, Mode=TwoWay}"/>
-                                    <Button Content="Remove" Click="OnRemoveEggRow"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto">
+                        <StackPanel x:Name="EggStack"/>
+                    </ScrollViewer>
                 </Grid>
             </TabViewItem>
             <TabViewItem Header="Tutor Moves">

@@ -10,7 +10,7 @@ C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\w
 C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\win-x86\msixpublish\hostfxr.dll
 C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\win-x86\msixpublish\hostpolicy.dll
 C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\win-x86\msixpublish\mscordaccore.dll
-C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\win-x86\msixpublish\mscordaccore_x86_x86_8.0.1825.31117.dll
+C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\win-x86\msixpublish\mscordaccore_x86_x86_8.0.1925.36514.dll
 C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\win-x86\msixpublish\mscordbi.dll
 C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\win-x86\msixpublish\mscorrc.dll
 C:\Users\Dame\Documents\HGEngineGUI\bin\x86\Release\net8.0-windows10.0.19041.0\win-x86\win-x86\msixpublish\msquic.dll

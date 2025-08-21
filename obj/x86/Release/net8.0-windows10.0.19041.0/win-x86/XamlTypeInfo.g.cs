@@ -906,6 +906,7 @@ namespace HGEngineGUI.HGEngineGUI_XamlTypeInfo
                 userType.StaticInitializer = StaticInitializer_55_TrainersPage;
                 userType.AddMemberName("ItemMacroList");
                 userType.AddMemberName("MoveMacroList");
+                userType.AddMemberName("SpeciesMacroList");
                 userType.SetIsLocalType();
                 xamlType = userType;
                 break;
@@ -1784,52 +1785,57 @@ namespace HGEngineGUI.HGEngineGUI_XamlTypeInfo
             var that = (global::HGEngineGUI.Pages.TrainersPage)instance;
             return that.MoveMacroList;
         }
-        private object get_88_TreeViewNode_Children(object instance)
+        private object get_88_TrainersPage_SpeciesMacroList(object instance)
+        {
+            var that = (global::HGEngineGUI.Pages.TrainersPage)instance;
+            return that.SpeciesMacroList;
+        }
+        private object get_89_TreeViewNode_Children(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             return that.Children;
         }
-        private object get_89_TreeViewNode_Content(object instance)
+        private object get_90_TreeViewNode_Content(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             return that.Content;
         }
-        private void set_89_TreeViewNode_Content(object instance, object Value)
+        private void set_90_TreeViewNode_Content(object instance, object Value)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             that.Content = (global::System.Object)Value;
         }
-        private object get_90_TreeViewNode_Depth(object instance)
+        private object get_91_TreeViewNode_Depth(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             return that.Depth;
         }
-        private object get_91_TreeViewNode_HasChildren(object instance)
+        private object get_92_TreeViewNode_HasChildren(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             return that.HasChildren;
         }
-        private object get_92_TreeViewNode_HasUnrealizedChildren(object instance)
+        private object get_93_TreeViewNode_HasUnrealizedChildren(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             return that.HasUnrealizedChildren;
         }
-        private void set_92_TreeViewNode_HasUnrealizedChildren(object instance, object Value)
+        private void set_93_TreeViewNode_HasUnrealizedChildren(object instance, object Value)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             that.HasUnrealizedChildren = (global::System.Boolean)Value;
         }
-        private object get_93_TreeViewNode_IsExpanded(object instance)
+        private object get_94_TreeViewNode_IsExpanded(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             return that.IsExpanded;
         }
-        private void set_93_TreeViewNode_IsExpanded(object instance, object Value)
+        private void set_94_TreeViewNode_IsExpanded(object instance, object Value)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             that.IsExpanded = (global::System.Boolean)Value;
         }
-        private object get_94_TreeViewNode_Parent(object instance)
+        private object get_95_TreeViewNode_Parent(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             return that.Parent;
@@ -2448,50 +2454,56 @@ namespace HGEngineGUI.HGEngineGUI_XamlTypeInfo
                 xamlMember.Getter = get_87_TrainersPage_MoveMacroList;
                 xamlMember.SetIsReadOnly();
                 break;
+            case "HGEngineGUI.Pages.TrainersPage.SpeciesMacroList":
+                userType = (global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlUserType)GetXamlTypeByName("HGEngineGUI.Pages.TrainersPage");
+                xamlMember = new global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlMember(this, "SpeciesMacroList", "System.Collections.Generic.List`1<String>");
+                xamlMember.Getter = get_88_TrainersPage_SpeciesMacroList;
+                xamlMember.SetIsReadOnly();
+                break;
             case "Microsoft.UI.Xaml.Controls.TreeViewNode.Children":
                 userType = (global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.TreeViewNode");
                 xamlMember = new global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlMember(this, "Children", "System.Collections.Generic.IList`1<Microsoft.UI.Xaml.Controls.TreeViewNode>");
-                xamlMember.Getter = get_88_TreeViewNode_Children;
+                xamlMember.Getter = get_89_TreeViewNode_Children;
                 xamlMember.SetIsReadOnly();
                 break;
             case "Microsoft.UI.Xaml.Controls.TreeViewNode.Content":
                 userType = (global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.TreeViewNode");
                 xamlMember = new global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlMember(this, "Content", "Object");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_89_TreeViewNode_Content;
-                xamlMember.Setter = set_89_TreeViewNode_Content;
+                xamlMember.Getter = get_90_TreeViewNode_Content;
+                xamlMember.Setter = set_90_TreeViewNode_Content;
                 break;
             case "Microsoft.UI.Xaml.Controls.TreeViewNode.Depth":
                 userType = (global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.TreeViewNode");
                 xamlMember = new global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlMember(this, "Depth", "Int32");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_90_TreeViewNode_Depth;
+                xamlMember.Getter = get_91_TreeViewNode_Depth;
                 xamlMember.SetIsReadOnly();
                 break;
             case "Microsoft.UI.Xaml.Controls.TreeViewNode.HasChildren":
                 userType = (global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.TreeViewNode");
                 xamlMember = new global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlMember(this, "HasChildren", "Boolean");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_91_TreeViewNode_HasChildren;
+                xamlMember.Getter = get_92_TreeViewNode_HasChildren;
                 xamlMember.SetIsReadOnly();
                 break;
             case "Microsoft.UI.Xaml.Controls.TreeViewNode.HasUnrealizedChildren":
                 userType = (global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.TreeViewNode");
                 xamlMember = new global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlMember(this, "HasUnrealizedChildren", "Boolean");
-                xamlMember.Getter = get_92_TreeViewNode_HasUnrealizedChildren;
-                xamlMember.Setter = set_92_TreeViewNode_HasUnrealizedChildren;
+                xamlMember.Getter = get_93_TreeViewNode_HasUnrealizedChildren;
+                xamlMember.Setter = set_93_TreeViewNode_HasUnrealizedChildren;
                 break;
             case "Microsoft.UI.Xaml.Controls.TreeViewNode.IsExpanded":
                 userType = (global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.TreeViewNode");
                 xamlMember = new global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlMember(this, "IsExpanded", "Boolean");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_93_TreeViewNode_IsExpanded;
-                xamlMember.Setter = set_93_TreeViewNode_IsExpanded;
+                xamlMember.Getter = get_94_TreeViewNode_IsExpanded;
+                xamlMember.Setter = set_94_TreeViewNode_IsExpanded;
                 break;
             case "Microsoft.UI.Xaml.Controls.TreeViewNode.Parent":
                 userType = (global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.TreeViewNode");
                 xamlMember = new global::HGEngineGUI.HGEngineGUI_XamlTypeInfo.XamlMember(this, "Parent", "Microsoft.UI.Xaml.Controls.TreeViewNode");
-                xamlMember.Getter = get_94_TreeViewNode_Parent;
+                xamlMember.Getter = get_95_TreeViewNode_Parent;
                 xamlMember.SetIsReadOnly();
                 break;
             }
