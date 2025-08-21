@@ -45,8 +45,10 @@ namespace HGEngineGUI.Data
             var blockStart = $"levelup {speciesMacro}";
             int startIdx = text.IndexOf(blockStart, StringComparison.Ordinal);
             if (startIdx < 0) return;
-            int endIdx = text.IndexOf("terminatelearnset", startIdx, StringComparison.Ordinal);
-            if (endIdx < 0) return;
+            // Replace the entire block until the next levelup header to avoid duplicate terminators
+            int nextIdx = text.IndexOf("\n\nlevelup ", startIdx + blockStart.Length, StringComparison.Ordinal);
+            if (nextIdx < 0) nextIdx = text.IndexOf("levelup ", startIdx + blockStart.Length, StringComparison.Ordinal);
+            int endIdx = nextIdx >= 0 ? nextIdx : text.Length;
 
             var sb = new StringBuilder();
             sb.AppendLine(blockStart);
@@ -54,7 +56,8 @@ namespace HGEngineGUI.Data
             {
                 sb.AppendLine($"    learnset {move}, {level}");
             }
-            sb.Append("    terminatelearnset");
+            sb.AppendLine("    terminatelearnset");
+            sb.AppendLine();
 
             string newText = text.Substring(0, startIdx) + sb.ToString() + text.Substring(endIdx);
             await File.WriteAllTextAsync(path, newText);
@@ -71,15 +74,18 @@ namespace HGEngineGUI.Data
             var blockStart = $"levelup {speciesMacro}";
             int startIdx = text.IndexOf(blockStart, StringComparison.Ordinal);
             if (startIdx < 0) return string.Empty;
-            int endIdx = text.IndexOf("terminatelearnset", startIdx, StringComparison.Ordinal);
-            if (endIdx < 0) return string.Empty;
+            // Preview by replacing up to the next block header
+            int nextIdx = text.IndexOf("\n\nlevelup ", startIdx + blockStart.Length, StringComparison.Ordinal);
+            if (nextIdx < 0) nextIdx = text.IndexOf("levelup ", startIdx + blockStart.Length, StringComparison.Ordinal);
+            int endIdx = nextIdx >= 0 ? nextIdx : text.Length;
             var sb = new StringBuilder();
             sb.AppendLine(blockStart);
             foreach (var (level, move) in entries)
             {
                 sb.AppendLine($"    learnset {move}, {level}");
             }
-            sb.Append("    terminatelearnset");
+            sb.AppendLine("    terminatelearnset");
+            sb.AppendLine();
             string updated = text.Substring(0, startIdx) + sb.ToString() + text.Substring(endIdx);
             return ComputeUnifiedDiff(text, updated, "levelupdata.s");
         }
@@ -112,8 +118,10 @@ namespace HGEngineGUI.Data
             var blockStart = $"evodata {speciesMacro}";
             int startIdx = text.IndexOf(blockStart, StringComparison.Ordinal);
             if (startIdx < 0) return string.Empty;
-            int endIdx = text.IndexOf("terminateevodata", startIdx, StringComparison.Ordinal);
-            if (endIdx < 0) return string.Empty;
+            // Replace entire evodata block up to next header to avoid duplicate terminators
+            int nextIdx = text.IndexOf("\n\nevodata ", startIdx + blockStart.Length, StringComparison.Ordinal);
+            if (nextIdx < 0) nextIdx = text.IndexOf("evodata ", startIdx + blockStart.Length, StringComparison.Ordinal);
+            int endIdx = nextIdx >= 0 ? nextIdx : text.Length;
             var sb = new StringBuilder();
             sb.AppendLine(blockStart);
             foreach (var (method, param, target) in evolutions)
@@ -121,7 +129,8 @@ namespace HGEngineGUI.Data
                 sb.AppendLine($"    evolution {method}, {param}, {target}");
             }
             int count = evolutions.Count; while (count++ < 9) sb.AppendLine("    evolution EVO_NONE, 0, SPECIES_NONE");
-            sb.Append("    terminateevodata");
+            sb.AppendLine("    terminateevodata");
+            sb.AppendLine();
             string updated = text.Substring(0, startIdx) + sb.ToString() + text.Substring(endIdx);
             return ComputeUnifiedDiff(text, updated, "evodata.s");
         }
@@ -465,6 +474,7 @@ namespace HGEngineGUI.Data
             var backup = path + ".bak";
             try { File.Copy(path, backup, true); } catch { }
             await File.WriteAllTextAsync(path, newText);
+            HGEngineGUI.Services.ChangeLog.Record(path, newText.Length);
         }
 
         // Save trainer party basics back into party <id> block
@@ -523,8 +533,10 @@ namespace HGEngineGUI.Data
             var blockStart = $"evodata {speciesMacro}";
             int startIdx = text.IndexOf(blockStart, StringComparison.Ordinal);
             if (startIdx < 0) return;
-            int endIdx = text.IndexOf("terminateevodata", startIdx, StringComparison.Ordinal);
-            if (endIdx < 0) return;
+            // Replace entire evodata block up to next header
+            int nextIdx = text.IndexOf("\n\nevodata ", startIdx + blockStart.Length, StringComparison.Ordinal);
+            if (nextIdx < 0) nextIdx = text.IndexOf("evodata ", startIdx + blockStart.Length, StringComparison.Ordinal);
+            int endIdx = nextIdx >= 0 ? nextIdx : text.Length;
 
             var sb = new StringBuilder();
             sb.AppendLine(blockStart);
@@ -535,7 +547,8 @@ namespace HGEngineGUI.Data
             // Fill remaining slots to 9 with EVO_NONE for structure consistency (optional)
             int count = evolutions.Count;
             while (count++ < 9) sb.AppendLine("    evolution EVO_NONE, 0, SPECIES_NONE");
-            sb.Append("    terminateevodata");
+            sb.AppendLine("    terminateevodata");
+            sb.AppendLine();
 
             var original = text;
             string newText = text.Substring(0, startIdx) + sb.ToString() + text.Substring(endIdx);

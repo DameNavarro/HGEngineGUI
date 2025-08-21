@@ -439,7 +439,7 @@ namespace HGEngineGUI.Pages
             var path = Data.HGParsers.PathLevelUp ?? Path.Combine(ProjectContext.RootPath ?? string.Empty, "armips", "data", "levelupdata.s");
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) { try { StatusText.Text = $"File not found: levelupdata.s"; } catch { } return; }
             await Data.HGSerializers.SaveLevelUpAsync(_species.Name, entries);
-            try { StatusText.Text = $"Saved level-up moves ({entries.Count})"; } catch { }
+            try { StatusText.Text = $"Saved level-up moves ({entries.Count}) -> {path}"; } catch { }
         }
 
         private async void OnPreviewLevelUp(object sender, RoutedEventArgs e)
@@ -494,7 +494,7 @@ namespace HGEngineGUI.Pages
             var path = Data.HGParsers.PathEgg ?? Path.Combine(ProjectContext.RootPath ?? string.Empty, "armips", "data", "eggmoves.s");
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) { try { StatusText.Text = $"File not found: eggmoves.s"; } catch { } return; }
             await Data.HGSerializers.SaveEggMovesAsync(_species.Name, moves);
-            try { StatusText.Text = $"Saved egg moves ({moves.Count})"; } catch { }
+            try { StatusText.Text = $"Saved egg moves ({moves.Count}) -> {path}"; } catch { }
         }
 
         private async void OnPreviewEggMoves(object sender, RoutedEventArgs e)
@@ -597,7 +597,7 @@ namespace HGEngineGUI.Pages
             var path = Data.HGParsers.PathEvo ?? Path.Combine(ProjectContext.RootPath ?? string.Empty, "armips", "data", "evodata.s");
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) { try { StatusText.Text = $"File not found: evodata.s"; } catch { } return; }
             await Data.HGSerializers.SaveEvolutionsAsync(_species.Name, current);
-            try { StatusText.Text = $"Saved evolutions ({current.Count})"; } catch { }
+            try { StatusText.Text = $"Saved evolutions ({current.Count}) -> {path}"; } catch { }
         }
 
         private async void OnPreviewEvolutions(object sender, RoutedEventArgs e)
@@ -615,7 +615,7 @@ namespace HGEngineGUI.Pages
             var path = Data.HGParsers.PathTm ?? Path.Combine(ProjectContext.RootPath ?? string.Empty, "armips", "data", "tmlearnset.txt");
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) { try { StatusText.Text = $"File not found: tmlearnset.txt"; } catch { } return; }
             await Data.HGSerializers.SaveTmHmForSpeciesAsync(_species.Name, selected);
-            try { StatusText.Text = $"Saved TM/HM selections ({selected.Count})"; } catch { }
+            try { StatusText.Text = $"Saved TM/HM selections ({selected.Count}) -> {path}"; } catch { }
         }
 
         private async void OnPreviewTmHm(object sender, RoutedEventArgs e)
@@ -647,7 +647,7 @@ namespace HGEngineGUI.Pages
             var path = Data.HGParsers.PathTutor ?? Path.Combine(ProjectContext.RootPath ?? string.Empty, "armips", "data", "tutordata.txt");
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) { try { StatusText.Text = $"File not found: tutordata.txt"; } catch { } return; }
             await Data.HGSerializers.SaveTutorsForSpeciesAsync(_species.Name, selected);
-            try { StatusText.Text = $"Saved tutors ({selected.Count})"; } catch { }
+            try { StatusText.Text = $"Saved tutors ({selected.Count}) -> {path}"; } catch { }
         }
 
         private async void OnPreviewTutors(object sender, RoutedEventArgs e)
@@ -684,7 +684,7 @@ namespace HGEngineGUI.Pages
             {
                 await Data.HGSerializers.SaveHiddenAbilityAsync(_species.Name, hidden);
             }
-            try { StatusText.Text = $"Saved overview"; } catch { }
+            try { StatusText.Text = $"Saved overview -> {path}"; } catch { }
         }
 
         private async void OnPreviewOverview(object sender, RoutedEventArgs e)
