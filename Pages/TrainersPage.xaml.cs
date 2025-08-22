@@ -14,6 +14,8 @@ namespace HGEngineGUI.Pages
         public List<string> ItemMacroList { get; private set; } = new();
         public List<string> MoveMacroList { get; private set; } = new();
         public List<string> SpeciesMacroList { get; private set; } = new();
+        private int _currentTrainerId = -1;
+        private string _currentTrainerName = string.Empty;
 
         public TrainersPage()
         {
@@ -96,8 +98,10 @@ namespace HGEngineGUI.Pages
             {
                 try
                 {
+                    _currentTrainerId = id;
                     await Data.HGParsers.RefreshTrainerDetailsAsync(id);
                     var header = Data.HGParsers.Trainers.FirstOrDefault(t => t.Id == id);
+                    _currentTrainerName = header?.Name ?? string.Empty;
                     HeaderText.Text = header != null ? $"{header.Id}: {header.Name} [{header.Class}] • mons={header.NumMons} • AI={header.AIFlags} • Type={header.BattleType}" : $"Trainer {id}";
                     _partyRows = Data.HGParsers.CurrentTrainerParty.Select(m => new PartyRow
                     {
@@ -130,6 +134,7 @@ namespace HGEngineGUI.Pages
                         Item3Combo.SelectedItem = header.Items.ElementAtOrDefault(2) ?? "ITEM_NONE";
                         Item4Combo.SelectedItem = header.Items.ElementAtOrDefault(3) ?? "ITEM_NONE";
                     }
+                    UpdateHeaderSummary();
                 }
                 catch (Exception ex)
                 {
@@ -174,7 +179,7 @@ namespace HGEngineGUI.Pages
             PartyStack.Children.Clear();
             foreach (var row in _partyRows.OrderBy(r => r.Slot))
             {
-                var container = new StackPanel { Spacing = 6, Padding = new Microsoft.UI.Xaml.Thickness(4) };
+                var container = new StackPanel { Spacing = 8, Padding = new Microsoft.UI.Xaml.Thickness(4) };
 
                 var topGrid = new Grid { ColumnSpacing = 12 };
                 topGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new Microsoft.UI.Xaml.GridLength(1, Microsoft.UI.Xaml.GridUnitType.Auto) });
@@ -213,13 +218,13 @@ namespace HGEngineGUI.Pages
                 topGrid.Children.Add(ivsStack);
                 Grid.SetColumn(ivsStack, 3);
 
-                var abilityStack = new StackPanel { Width = 120 };
-                abilityStack.Children.Add(new TextBlock { Text = "AbilitySlot", FontSize = 12 });
-                var abilityBox = new TextBox { Text = row.AbilitySlot.ToString() };
-                abilityBox.TextChanging += (s, e) => { if (int.TryParse(abilityBox.Text, out var v)) row.AbilitySlot = v; };
-                abilityStack.Children.Add(abilityBox);
-                topGrid.Children.Add(abilityStack);
-                Grid.SetColumn(abilityStack, 4);
+                var abilitySlotStack = new StackPanel { Width = 120 };
+                abilitySlotStack.Children.Add(new TextBlock { Text = "AbilitySlot", FontSize = 12 });
+                var abilitySlotBox = new TextBox { Text = row.AbilitySlot.ToString() };
+                abilitySlotBox.TextChanging += (s, e) => { if (int.TryParse(abilitySlotBox.Text, out var v)) row.AbilitySlot = v; };
+                abilitySlotStack.Children.Add(abilitySlotBox);
+                topGrid.Children.Add(abilitySlotStack);
+                Grid.SetColumn(abilitySlotStack, 4);
 
                 var itemStack = new StackPanel { Width = 240 };
                 itemStack.Children.Add(new TextBlock { Text = "Item", FontSize = 12 });
@@ -230,10 +235,12 @@ namespace HGEngineGUI.Pages
                 topGrid.Children.Add(itemStack);
                 Grid.SetColumn(itemStack, 5);
 
+                container.Children.Add(new TextBlock { Text = "Basics", FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Margin = new Microsoft.UI.Xaml.Thickness(0, 4, 0, 0) });
                 container.Children.Add(topGrid);
 
                 var moveGrid = new Grid { ColumnSpacing = 8 };
                 for (int i = 0; i < 4; i++) moveGrid.ColumnDefinitions.Add(new ColumnDefinition());
+                container.Children.Add(new TextBlock { Text = "Moves", FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Margin = new Microsoft.UI.Xaml.Thickness(0, 8, 0, 0) });
                 container.Children.Add(moveGrid);
 
                 void AddMove(StackPanel parent, string label, Func<string> getVal, Action<string> setVal)
@@ -254,21 +261,72 @@ namespace HGEngineGUI.Pages
 
                 var miscGrid = new Grid { ColumnSpacing = 8 };
                 for (int i = 0; i < 4; i++) miscGrid.ColumnDefinitions.Add(new ColumnDefinition());
-                var natureStack = new StackPanel(); natureStack.Children.Add(new TextBlock { Text = "Nature", FontSize = 12 }); var natureBox = new TextBox { Text = row.Nature }; natureBox.TextChanging += (s, e) => row.Nature = natureBox.Text; natureStack.Children.Add(natureBox); miscGrid.Children.Add(natureStack); Grid.SetColumn(natureStack, 0);
+                var natureStack = new StackPanel(); natureStack.Children.Add(new TextBlock { Text = "Nature", FontSize = 12 }); var natureBox = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.NatureMacros, SelectedItem = row.Nature }; natureBox.SelectionChanged += (s, e) => { row.Nature = (natureBox.SelectedItem as string) ?? (natureBox.Text ?? string.Empty); }; natureBox.LostFocus += (s, e) => { row.Nature = natureBox.Text ?? string.Empty; }; natureStack.Children.Add(natureBox); miscGrid.Children.Add(natureStack); Grid.SetColumn(natureStack, 0);
                 var formStack = new StackPanel(); formStack.Children.Add(new TextBlock { Text = "Form", FontSize = 12 }); var formBox = new TextBox { Text = row.Form.ToString() }; formBox.TextChanging += (s, e) => { if (int.TryParse(formBox.Text, out var v)) row.Form = v; }; formStack.Children.Add(formBox); miscGrid.Children.Add(formStack); Grid.SetColumn(formStack, 1);
-                var ballStack = new StackPanel(); ballStack.Children.Add(new TextBlock { Text = "Ball", FontSize = 12 }); var ballBox = new TextBox { Text = row.Ball }; ballBox.TextChanging += (s, e) => row.Ball = ballBox.Text; ballStack.Children.Add(ballBox); miscGrid.Children.Add(ballStack); Grid.SetColumn(ballStack, 2);
+                var ballStack = new StackPanel(); ballStack.Children.Add(new TextBlock { Text = "Ball", FontSize = 12 }); var ballBox = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.BallMacros, SelectedItem = row.Ball }; ballBox.SelectionChanged += (s, e) => { row.Ball = (ballBox.SelectedItem as string) ?? (ballBox.Text ?? string.Empty); }; ballBox.LostFocus += (s, e) => { row.Ball = ballBox.Text ?? string.Empty; }; ballStack.Children.Add(ballBox); miscGrid.Children.Add(ballStack); Grid.SetColumn(ballStack, 2);
                 var shinyStack = new StackPanel(); shinyStack.Children.Add(new TextBlock { Text = "Shiny Lock", FontSize = 12 }); var shinyBox = new CheckBox { IsChecked = row.ShinyLock }; shinyBox.Checked += (s, e) => row.ShinyLock = true; shinyBox.Unchecked += (s, e) => row.ShinyLock = false; shinyStack.Children.Add(shinyBox); miscGrid.Children.Add(shinyStack); Grid.SetColumn(shinyStack, 3);
+                container.Children.Add(new TextBlock { Text = "Details", FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Margin = new Microsoft.UI.Xaml.Thickness(0, 8, 0, 0) });
                 container.Children.Add(miscGrid);
 
-                var lastGrid = new Grid { ColumnSpacing = 8 };
-                lastGrid.ColumnDefinitions.Add(new ColumnDefinition());
-                lastGrid.ColumnDefinitions.Add(new ColumnDefinition());
-                var ppStack = new StackPanel(); ppStack.Children.Add(new TextBlock { Text = "PP (comma-separated)", FontSize = 12 }); var ppBox = new TextBox { Text = row.PP }; ppBox.TextChanging += (s, e) => row.PP = ppBox.Text; ppStack.Children.Add(ppBox); lastGrid.Children.Add(ppStack); Grid.SetColumn(ppStack, 0);
-                var nickStack = new StackPanel(); nickStack.Children.Add(new TextBlock { Text = "Nickname", FontSize = 12 }); var nickBox = new TextBox { Text = row.Nickname }; nickBox.TextChanging += (s, e) => row.Nickname = nickBox.Text; nickStack.Children.Add(nickBox); lastGrid.Children.Add(nickStack); Grid.SetColumn(nickStack, 1);
-                container.Children.Add(lastGrid);
+                // Collapsible Advanced section per mon
+                var expander = new Expander { Header = "Advanced", IsExpanded = false };
+                var adv = new StackPanel { Spacing = 6 };
+                var advGrid1 = new Grid { ColumnSpacing = 8 };
+                for (int i = 0; i < 4; i++) advGrid1.ColumnDefinitions.Add(new ColumnDefinition());
+                var advAbilityStack = new StackPanel(); advAbilityStack.Children.Add(new TextBlock { Text = "Ability (macro)", FontSize = 12 }); var advAbilityBox = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.AbilityMacros, SelectedItem = row.Ability }; advAbilityBox.SelectionChanged += (s, e) => row.Ability = (advAbilityBox.SelectedItem as string) ?? (advAbilityBox.Text ?? string.Empty); advAbilityBox.LostFocus += (s, e) => row.Ability = advAbilityBox.Text ?? string.Empty; advAbilityStack.Children.Add(advAbilityBox); advGrid1.Children.Add(advAbilityStack); Grid.SetColumn(advAbilityStack, 0);
+                var ballsealStack = new StackPanel(); ballsealStack.Children.Add(new TextBlock { Text = "BallSeal", FontSize = 12 }); var ballsealBox = new TextBox { Text = row.BallSeal.ToString() }; ballsealBox.TextChanging += (s, e) => { if (int.TryParse(ballsealBox.Text, out var v)) row.BallSeal = v; }; ballsealStack.Children.Add(ballsealBox); advGrid1.Children.Add(ballsealStack); Grid.SetColumn(ballsealStack, 1);
+                var typesStack = new StackPanel(); typesStack.Children.Add(new TextBlock { Text = "Types (TYPE_*, TYPE_*)", FontSize = 12 }); var typesBox1 = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.TypeMacros, SelectedItem = row.Type1 }; typesBox1.SelectionChanged += (s, e) => row.Type1 = (typesBox1.SelectedItem as string) ?? (typesBox1.Text ?? string.Empty); typesBox1.LostFocus += (s, e) => row.Type1 = typesBox1.Text ?? string.Empty; typesStack.Children.Add(typesBox1); var typesBox2 = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.TypeMacros, SelectedItem = row.Type2 }; typesBox2.SelectionChanged += (s, e) => row.Type2 = (typesBox2.SelectedItem as string) ?? (typesBox2.Text ?? string.Empty); typesBox2.LostFocus += (s, e) => row.Type2 = typesBox2.Text ?? string.Empty; typesStack.Children.Add(typesBox2); advGrid1.Children.Add(typesStack); Grid.SetColumn(typesStack, 2);
+                var flagsStack = new StackPanel(); flagsStack.Children.Add(new TextBlock { Text = "AdditionalFlags", FontSize = 12 }); var flagsBox = new TextBox { Text = row.AdditionalFlags.ToString() }; flagsBox.TextChanging += (s, e) => { if (int.TryParse(flagsBox.Text, out var v)) row.AdditionalFlags = v; }; flagsStack.Children.Add(flagsBox); advGrid1.Children.Add(flagsStack); Grid.SetColumn(flagsStack, 3);
+                adv.Children.Add(advGrid1);
 
-                PartyStack.Children.Add(container);
+                var advGrid2 = new Grid { ColumnSpacing = 8 };
+                for (int i = 0; i < 6; i++) advGrid2.ColumnDefinitions.Add(new ColumnDefinition());
+                StackPanel Stat(string label, Func<int> get, Action<int> set)
+                {
+                    var sp = new StackPanel(); sp.Children.Add(new TextBlock { Text = label, FontSize = 12 }); var tb = new TextBox { Text = get().ToString() }; tb.TextChanging += (s, e) => { if (int.TryParse(tb.Text, out var v)) set(v); }; sp.Children.Add(tb); return sp;
+                }
+                var statHp = Stat("HP", () => row.Hp, v => row.Hp = v); advGrid2.Children.Add(statHp); Grid.SetColumn(statHp, 0);
+                var statAtk = Stat("Atk", () => row.Atk, v => row.Atk = v); advGrid2.Children.Add(statAtk); Grid.SetColumn(statAtk, 1);
+                var statDef = Stat("Def", () => row.Def, v => row.Def = v); advGrid2.Children.Add(statDef); Grid.SetColumn(statDef, 2);
+                var statSpe = Stat("Spe", () => row.Speed, v => row.Speed = v); advGrid2.Children.Add(statSpe); Grid.SetColumn(statSpe, 3);
+                var statSpA = Stat("SpAtk", () => row.SpAtk, v => row.SpAtk = v); advGrid2.Children.Add(statSpA); Grid.SetColumn(statSpA, 4);
+                var statSpD = Stat("SpDef", () => row.SpDef, v => row.SpDef = v); advGrid2.Children.Add(statSpD); Grid.SetColumn(statSpD, 5);
+                adv.Children.Add(advGrid2);
+
+                var advGrid3 = new Grid { ColumnSpacing = 8 };
+                for (int i = 0; i < 3; i++) advGrid3.ColumnDefinitions.Add(new ColumnDefinition());
+                var ivnumsStack = new StackPanel(); ivnumsStack.Children.Add(new TextBlock { Text = "IVNums (6 comma)", FontSize = 12 }); var ivnumsBox = new TextBox { Text = row.IVNums }; ivnumsBox.TextChanging += (s, e) => row.IVNums = ivnumsBox.Text; ivnumsStack.Children.Add(ivnumsBox); advGrid3.Children.Add(ivnumsStack); Grid.SetColumn(ivnumsStack, 0);
+                var evnumsStack = new StackPanel(); evnumsStack.Children.Add(new TextBlock { Text = "EVNums (6 comma)", FontSize = 12 }); var evnumsBox = new TextBox { Text = row.EVNums }; evnumsBox.TextChanging += (s, e) => row.EVNums = evnumsBox.Text; evnumsStack.Children.Add(evnumsBox); advGrid3.Children.Add(evnumsStack); Grid.SetColumn(evnumsStack, 1);
+                var statusStack = new StackPanel(); statusStack.Children.Add(new TextBlock { Text = "Status", FontSize = 12 }); var statusBox = new TextBox { Text = row.Status.ToString() }; statusBox.TextChanging += (s, e) => { if (int.TryParse(statusBox.Text, out var v)) row.Status = v; }; statusStack.Children.Add(statusBox); advGrid3.Children.Add(statusStack); Grid.SetColumn(statusStack, 2);
+                adv.Children.Add(advGrid3);
+
+                var ppCountsStack = new StackPanel(); ppCountsStack.Children.Add(new TextBlock { Text = "PP Counts (4 comma)", FontSize = 12 }); var ppCountsBox = new TextBox { Text = row.PPCounts }; ppCountsBox.TextChanging += (s, e) => row.PPCounts = ppCountsBox.Text; ppCountsStack.Children.Add(ppCountsBox); adv.Children.Add(ppCountsStack);
+
+                // Move PP and Nickname into Advanced section
+                var advGrid4 = new Grid { ColumnSpacing = 8 };
+                advGrid4.ColumnDefinitions.Add(new ColumnDefinition());
+                advGrid4.ColumnDefinitions.Add(new ColumnDefinition());
+                var ppStack = new StackPanel(); ppStack.Children.Add(new TextBlock { Text = "PP (comma-separated)", FontSize = 12 }); var ppBox = new TextBox { Text = row.PP }; ppBox.TextChanging += (s, e) => row.PP = ppBox.Text; ppStack.Children.Add(ppBox); advGrid4.Children.Add(ppStack); Grid.SetColumn(ppStack, 0);
+                var nickStack = new StackPanel(); nickStack.Children.Add(new TextBlock { Text = "Nickname", FontSize = 12 }); var nickBox = new TextBox { Text = row.Nickname }; nickBox.TextChanging += (s, e) => row.Nickname = nickBox.Text; nickStack.Children.Add(nickBox); advGrid4.Children.Add(nickStack); Grid.SetColumn(nickStack, 1);
+                adv.Children.Add(advGrid4);
+
+                expander.Content = adv;
+                container.Children.Add(expander);
+
+                // Visual separation for each party mon
+                var border = new Microsoft.UI.Xaml.Controls.Border
+                {
+                    BorderThickness = new Microsoft.UI.Xaml.Thickness(1),
+                    BorderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.DimGray),
+                    CornerRadius = new Microsoft.UI.Xaml.CornerRadius(4),
+                    Margin = new Microsoft.UI.Xaml.Thickness(0, 6, 0, 6),
+                    Padding = new Microsoft.UI.Xaml.Thickness(6),
+                    Child = container
+                };
+
+                PartyStack.Children.Add(border);
             }
+            UpdateHeaderSummary();
         }
 
         private void SyncPartyFromUi()
@@ -290,7 +348,22 @@ namespace HGEngineGUI.Pages
                 Ball = (r.Ball ?? string.Empty).Trim(),
                 ShinyLock = r.ShinyLock,
                 Nickname = r.Nickname ?? string.Empty,
-                PP = r.PP ?? string.Empty
+                PP = r.PP ?? string.Empty,
+                Ability = r.Ability ?? string.Empty,
+                BallSeal = r.BallSeal,
+                IVNums = r.IVNums ?? string.Empty,
+                EVNums = r.EVNums ?? string.Empty,
+                Status = r.Status,
+                Hp = r.Hp,
+                Atk = r.Atk,
+                Def = r.Def,
+                Speed = r.Speed,
+                SpAtk = r.SpAtk,
+                SpDef = r.SpDef,
+                Type1 = r.Type1 ?? string.Empty,
+                Type2 = r.Type2 ?? string.Empty,
+                PPCounts = r.PPCounts ?? string.Empty,
+                AdditionalFlags = r.AdditionalFlags
             }).ToList();
         }
 
@@ -321,6 +394,7 @@ namespace HGEngineGUI.Pages
             };
             _partyRows.Add(clone);
             RenderPartyStack();
+            UpdateHeaderSummary();
         }
 
         private void OnMovePartyRowUp(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -342,6 +416,17 @@ namespace HGEngineGUI.Pages
             var row = GetActivePartyRow(); if (row == null) return;
             _partyRows.Remove(row);
             RenderPartyStack();
+            UpdateHeaderSummary();
+        }
+
+        private void UpdateHeaderSummary()
+        {
+            if (_currentTrainerId < 0) return;
+            var cls = ClassCombo.SelectedItem as string ?? string.Empty;
+            var ai = AIFlagsBox.Text ?? string.Empty;
+            var bt = (BattleTypeCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "SINGLE_BATTLE";
+            var name = string.IsNullOrWhiteSpace(_currentTrainerName) ? "" : _currentTrainerName;
+            HeaderText.Text = $"{_currentTrainerId}: {name} [{cls}] • mons={_partyRows.Count} • AI={ai} • Type={bt}";
         }
 
         
@@ -450,6 +535,23 @@ namespace HGEngineGUI.Pages
             public bool ShinyLock { get; set; } // placeholder
             public string Nickname { get; set; } = string.Empty; // placeholder
             public string PP { get; set; } = string.Empty; // placeholder
+
+            // Advanced
+            public string Ability { get; set; } = string.Empty;
+            public int BallSeal { get; set; }
+            public string IVNums { get; set; } = string.Empty;
+            public string EVNums { get; set; } = string.Empty;
+            public int Status { get; set; }
+            public int Hp { get; set; }
+            public int Atk { get; set; }
+            public int Def { get; set; }
+            public int Speed { get; set; }
+            public int SpAtk { get; set; }
+            public int SpDef { get; set; }
+            public string Type1 { get; set; } = string.Empty;
+            public string Type2 { get; set; } = string.Empty;
+            public string PPCounts { get; set; } = string.Empty;
+            public int AdditionalFlags { get; set; }
         }
 
         private async void OnSaveTrainer(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -466,7 +568,8 @@ namespace HGEngineGUI.Pages
                     Item3Combo.SelectedItem as string ?? "ITEM_NONE",
                     Item4Combo.SelectedItem as string ?? "ITEM_NONE",
                 };
-                await Data.HGSerializers.SaveTrainerHeaderAsync(id, cls, ai, bt, items);
+                var dataTypeFlags = ComposeTrainerDataTypeFlags();
+                await Data.HGSerializers.SaveTrainerHeaderAsync(id, cls, ai, bt, items, dataTypeFlags);
                 await LoadUpdatedAsync();
             }
         }
@@ -487,7 +590,8 @@ namespace HGEngineGUI.Pages
             var nummonsMatch = System.Text.RegularExpressions.Regex.Match(m.Groups["body"].Value, @"nummons\s+(?<v>\d+)");
             var nummons = nummonsMatch.Success ? nummonsMatch.Groups["v"].Value : "0";
             var sb = new System.Text.StringBuilder();
-            sb.AppendLine($"\n    trainermontype TRAINER_DATA_TYPE_NOTHING");
+            var dataTypeFlags = ComposeTrainerDataTypeFlags();
+            sb.AppendLine($"\n    trainermontype {dataTypeFlags}");
             sb.AppendLine($"    trainerclass {ClassCombo.SelectedItem as string ?? ""}");
             sb.AppendLine($"    nummons {nummons}");
             sb.AppendLine($"    item {Item1Combo.SelectedItem as string ?? "ITEM_NONE"}");
@@ -527,6 +631,106 @@ namespace HGEngineGUI.Pages
                 }
             };
             await dlg.ShowAsync();
+        }
+
+        private string ComposeTrainerDataTypeFlags()
+        {
+            var flags = new List<string>();
+            // Items
+            if ((Item1Combo.SelectedItem as string) != "ITEM_NONE" || (Item2Combo.SelectedItem as string) != "ITEM_NONE" || (Item3Combo.SelectedItem as string) != "ITEM_NONE" || (Item4Combo.SelectedItem as string) != "ITEM_NONE")
+                flags.Add("TRAINER_DATA_TYPE_ITEMS");
+            // Moves
+            bool anyMoves = _partyRows.Any(r => !string.IsNullOrWhiteSpace(r.Move1) && r.Move1 != "MOVE_NONE" || !string.IsNullOrWhiteSpace(r.Move2) && r.Move2 != "MOVE_NONE" || !string.IsNullOrWhiteSpace(r.Move3) && r.Move3 != "MOVE_NONE" || !string.IsNullOrWhiteSpace(r.Move4) && r.Move4 != "MOVE_NONE");
+            if (anyMoves) flags.Add("TRAINER_DATA_TYPE_MOVES");
+            // Ability macro present
+            if (_partyRows.Any(r => !string.IsNullOrWhiteSpace(r.Ability))) flags.Add("TRAINER_DATA_TYPE_ABILITY");
+            // Ball macro present
+            if (_partyRows.Any(r => !string.IsNullOrWhiteSpace(r.Ball))) flags.Add("TRAINER_DATA_TYPE_BALL");
+            // Nature
+            if (_partyRows.Any(r => !string.IsNullOrWhiteSpace(r.Nature))) flags.Add("TRAINER_DATA_TYPE_NATURE_SET");
+            // Shiny Lock
+            if (_partyRows.Any(r => r.ShinyLock)) flags.Add("TRAINER_DATA_TYPE_SHINY_LOCK");
+            // IV/EV set (includes IVNums/EVNums and type overrides per wiki)
+            bool anyIvEv = _partyRows.Any(r =>
+                (!string.IsNullOrWhiteSpace(r.IVNums)) || (!string.IsNullOrWhiteSpace(r.EVNums)) ||
+                !string.IsNullOrWhiteSpace(r.Type1) || !string.IsNullOrWhiteSpace(r.Type2));
+            if (anyIvEv) flags.Add("TRAINER_DATA_TYPE_IV_EV_SET");
+            // Additional flags block (HP/Atk/Def/Spe/SpAtk/SpDef, Status, PPCounts, Nickname, BallSeal per-mon)
+            bool anyAdditional = _partyRows.Any(r =>
+                r.Hp != 0 || r.Atk != 0 || r.Def != 0 || r.Speed != 0 || r.SpAtk != 0 || r.SpDef != 0 ||
+                r.Status != 0 || !string.IsNullOrWhiteSpace(r.PPCounts) || !string.IsNullOrWhiteSpace(r.Nickname) || r.BallSeal != 0 ||
+                r.AdditionalFlags > 0);
+            if (anyAdditional) flags.Add("TRAINER_DATA_TYPE_ADDITIONAL_FLAGS");
+
+            return flags.Count == 0 ? "TRAINER_DATA_TYPE_NOTHING" : string.Join(" | ", flags);
+        }
+
+        // Optional helper to compute per-mon additionalflags number for future save wiring
+        private static int ComputeAdditionalFlagsForMon(PartyRow r)
+        {
+            int af = 0;
+            if (r.Status != 0) af |= 0x01; // TRAINER_DATA_EXTRA_TYPE_STATUS
+            if (r.Hp != 0) af |= 0x02; // HP
+            if (r.Atk != 0) af |= 0x04; // ATK
+            if (r.Def != 0) af |= 0x08; // DEF
+            if (r.Speed != 0) af |= 0x10; // SPEED
+            if (r.SpAtk != 0) af |= 0x20; // SP_ATK
+            if (r.SpDef != 0) af |= 0x40; // SP_DEF
+            if (!string.IsNullOrWhiteSpace(r.PPCounts)) af |= 0x80; // PP_COUNTS
+            if (!string.IsNullOrWhiteSpace(r.Nickname)) af |= 0x100; // NICKNAME
+            // Types override lives under IV/EV set flag; no separate extra-type bit in constants.s
+            return af;
+        }
+
+        private async void OnEditAIFlags(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+        {
+            try
+            {
+                var allFlags = Data.HGParsers.AIFlagMacros.ToList();
+                allFlags.Sort(StringComparer.Ordinal);
+                var current = (AIFlagsBox.Text ?? string.Empty)
+                    .Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(s => s.Trim())
+                    .ToHashSet(StringComparer.Ordinal);
+
+                var panel = new StackPanel { Spacing = 6 };
+                var checks = new List<CheckBox>();
+                foreach (var flag in allFlags)
+                {
+                    var cb = new CheckBox { Content = flag, IsChecked = current.Contains(flag) };
+                    checks.Add(cb);
+                    panel.Children.Add(cb);
+                }
+
+                var dlg = new ContentDialog
+                {
+                    Title = "Select AI Flags",
+                    PrimaryButtonText = "Apply",
+                    CloseButtonText = "Cancel",
+                    XamlRoot = this.XamlRoot,
+                    Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }
+                };
+                var res = await dlg.ShowAsync();
+                if (res == ContentDialogResult.Primary)
+                {
+                    var selected = checks.Where(c => c.IsChecked == true).Select(c => c.Content?.ToString() ?? string.Empty).Where(s => !string.IsNullOrEmpty(s));
+                    AIFlagsBox.Text = string.Join(" | ", selected);
+                }
+            }
+            catch { }
+        }
+
+        private async void OnShowAIFlagsHelp(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+        {
+            try
+            {
+                // Minimal help text with the full list of flags pulled from constants.s
+                var flags = string.Join("\n", Data.HGParsers.AIFlagMacros.OrderBy(s => s, StringComparer.Ordinal));
+                var help = "Trainer AI flags (from armips/include/constants.s):\n\n" + flags + "\n\nCombine with | on the AI flags line.";
+                var dlg = new ContentDialog { Title = "AI Flags", Content = help, PrimaryButtonText = "OK", XamlRoot = this.XamlRoot };
+                await dlg.ShowAsync();
+            }
+            catch { }
         }
 
         private async void OnRestoreTrainerBackup(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)

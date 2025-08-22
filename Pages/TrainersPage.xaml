@@ -39,7 +39,11 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <ComboBox x:Name="ClassCombo" Grid.Column="0" PlaceholderText="Class"/>
-                <TextBox x:Name="AIFlagsBox" Grid.Column="1" PlaceholderText="AI flags"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                    <TextBox x:Name="AIFlagsBox" Width="240" PlaceholderText="AI flags"/>
+                    <Button x:Name="EditAIFlagsBtn" Content="Edit" Click="OnEditAIFlags"/>
+                    <Button x:Name="AIFlagsHelpBtn" Content="?" Click="OnShowAIFlagsHelp"/>
+                </StackPanel>
                 <ComboBox x:Name="BattleTypeCombo" Grid.Column="2">
                     <ComboBoxItem Content="SINGLE_BATTLE"/>
                     <ComboBoxItem Content="DOUBLE_BATTLE"/>
@@ -58,6 +62,8 @@
             <CommandBar>
                 <AppBarButton Icon="PreviewLink" Label="Preview Header" Click="OnPreviewTrainerHeader"/>
                 <AppBarButton Icon="Save" Label="Save Header" Click="OnSaveTrainer"/>
+                <AppBarButton Icon="Edit" Label="AI Flags" Click="OnEditAIFlags"/>
+                <AppBarButton Icon="Help" Label="Flags Help" Click="OnShowAIFlagsHelp"/>
                 <AppBarButton Icon="Refresh" Label="Restore Backup" Click="OnRestoreTrainerBackup"/>
             </CommandBar>
 

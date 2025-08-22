@@ -35,6 +35,18 @@ namespace HGEngineGUI.Data
         private static Dictionary<string,int> _mapValues = new(StringComparer.Ordinal);
         public static bool TryGetMapValue(string macro, out int value) => _mapValues.TryGetValue(macro, out value);
 
+        // Trainer AI flag macros (F_*) parsed from armips/include/constants.s
+        public static IReadOnlyList<string> AIFlagMacros => _aiFlagMacros;
+        private static List<string> _aiFlagMacros = new();
+
+        // Nature macros from include/pokemon.h (NATURE_*)
+        public static IReadOnlyList<string> NatureMacros => _natureMacros;
+        private static List<string> _natureMacros = new();
+
+        // Ball macros (try armips/include/items or constants.s items set). We reuse ItemMacros and filter for BALL_ if available.
+        public static IReadOnlyList<string> BallMacros => _ballMacros;
+        private static List<string> _ballMacros = new();
+
         // Detail caches populated on demand for a selected species
         public static IReadOnlyList<(int level, string move)> LevelUpMoves => _levelUpMoves;
         public static IReadOnlyList<(string method, int param, string target)> Evolutions => _evolutions;
@@ -134,7 +146,22 @@ namespace HGEngineGUI.Data
             string Ball,
             bool ShinyLock,
             string Nickname,
-            string PP
+            string PP,
+            string Ability,
+            int BallSeal,
+            string IVNums,
+            string EVNums,
+            int Status,
+            int Hp,
+            int Atk,
+            int Def,
+            int Speed,
+            int SpAtk,
+            int SpDef,
+            string Type1,
+            string Type2,
+            string PPCounts,
+            int AdditionalFlags
         );
         public static IReadOnlyList<TrainerMon> CurrentTrainerParty => _currentParty;
         private static List<TrainerMon> _currentParty = new();
@@ -158,6 +185,9 @@ namespace HGEngineGUI.Data
             int currentIndex = -1;
             int level = 0; int abilityslot = 0; int ivs = 0; string species = string.Empty; string item = "ITEM_NONE";
             string nature = string.Empty; int form = 0; string ball = string.Empty; bool shiny = false; string nickname = string.Empty; string pp = string.Empty;
+            string ability = string.Empty; int ballseal = 0; string ivnums = string.Empty; string evnums = string.Empty; string ppcounts = string.Empty;
+            int status = 0; int hp = 0; int atk = 0; int def = 0; int speed = 0; int spatk = 0; int spdef = 0; int additionalflags = 0;
+            string type1 = string.Empty; string type2 = string.Empty;
             var moves = new List<string>(4);
             void FlushIfComplete()
             {
@@ -177,9 +207,26 @@ namespace HGEngineGUI.Data
                         ball,
                         shiny,
                         nickname,
-                        pp
+                        pp,
+                        ability,
+                        ballseal,
+                        ivnums,
+                        evnums,
+                        status,
+                        hp,
+                        atk,
+                        def,
+                        speed,
+                        spatk,
+                        spdef,
+                        type1,
+                        type2,
+                        ppcounts,
+                        additionalflags
                     ));
                     level = 0; abilityslot = 0; ivs = 0; species = string.Empty; currentIndex = -1; item = "ITEM_NONE"; moves.Clear(); nature = string.Empty; form = 0; ball = string.Empty; shiny = false; nickname = string.Empty; pp = string.Empty;
+                    ability = string.Empty; ballseal = 0; ivnums = string.Empty; evnums = string.Empty; ppcounts = string.Empty;
+                    status = 0; hp = atk = def = speed = spatk = spdef = 0; additionalflags = 0; type1 = type2 = string.Empty;
                 }
             }
             var idxRegex = new Regex(@"mon\s+(?<i>\d+)");
@@ -200,11 +247,13 @@ namespace HGEngineGUI.Data
                     int.TryParse(line.Substring(4).Trim(), out ivs);
                     continue;
                 }
+                if (line.StartsWith("ivnums ")) { ivnums = line.Substring("ivnums ".Length).Trim(); continue; }
                 if (line.StartsWith("abilityslot "))
                 {
                     int.TryParse(line.Substring("abilityslot ".Length).Trim(), out abilityslot);
                     continue;
                 }
+                if (line.StartsWith("ability ")) { ability = line.Substring("ability ".Length).Trim(); continue; }
                 if (line.StartsWith("level "))
                 {
                     int.TryParse(line.Substring(6).Trim(), out level);
@@ -236,6 +285,7 @@ namespace HGEngineGUI.Data
                     ball = line.Substring("ball ".Length).Trim();
                     continue;
                 }
+                if (line.StartsWith("ballseal ")) { int.TryParse(line.Substring("ballseal ".Length).Trim(), out ballseal); continue; }
                 if (line.StartsWith("shinylock") || line.StartsWith("shiny_lock") || line.StartsWith("shiny "))
                 {
                     // Accept variants: "shinylock", "shinylock 1", "shiny 1"
@@ -248,6 +298,7 @@ namespace HGEngineGUI.Data
                     pp = line.Substring(3).Trim();
                     continue;
                 }
+                if (line.StartsWith("ppcounts ")) { ppcounts = line.Substring("ppcounts ".Length).Trim(); continue; }
                 if (line.StartsWith("nickname "))
                 {
                     nickname = line.Substring("nickname ".Length).Trim().Trim('"');
@@ -258,6 +309,16 @@ namespace HGEngineGUI.Data
                     species = line.Substring(8).Trim();
                     continue;
                 }
+                if (line.StartsWith("evnums ")) { evnums = line.Substring("evnums ".Length).Trim(); continue; }
+                if (line.StartsWith("status ")) { int.TryParse(line.Substring("status ".Length).Trim(), out status); continue; }
+                if (line.StartsWith("hp ")) { int.TryParse(line.Substring(3).Trim(), out hp); continue; }
+                if (line.StartsWith("atk ")) { int.TryParse(line.Substring(4).Trim(), out atk); continue; }
+                if (line.StartsWith("def ")) { int.TryParse(line.Substring(4).Trim(), out def); continue; }
+                if (line.StartsWith("speed ")) { int.TryParse(line.Substring(6).Trim(), out speed); continue; }
+                if (line.StartsWith("spatk ")) { int.TryParse(line.Substring(6).Trim(), out spatk); continue; }
+                if (line.StartsWith("spdef ")) { int.TryParse(line.Substring(6).Trim(), out spdef); continue; }
+                if (line.StartsWith("types ")) { var parts2 = line.Substring(6).Split(','); if (parts2.Length >= 2) { type1 = parts2[0].Trim(); type2 = parts2[1].Trim(); } continue; }
+                if (line.StartsWith("additionalflags ")) { int.TryParse(line.Substring("additionalflags ".Length).Trim(), out additionalflags); continue; }
             }
             // Flush the last mon at end of block
             FlushIfComplete();
@@ -515,6 +576,44 @@ namespace HGEngineGUI.Data
                     }
                 }
             }
+
+            // Trainer AI flags (F_*) from armips/include/constants.s
+            _aiFlagMacros = new();
+            try
+            {
+                var constantsAsm = Path.Combine(ProjectContext.RootPath, "armips", "include", "constants.s");
+                if (File.Exists(constantsAsm))
+                {
+                    foreach (var line in await File.ReadAllLinesAsync(constantsAsm))
+                    {
+                        var m = Regex.Match(line, @"^\s*\.equ\s+(F_[A-Z0-9_]+)\s*,");
+                        if (!m.Success) continue;
+                        var name = m.Groups[1].Value;
+                        if (!_aiFlagMacros.Contains(name)) _aiFlagMacros.Add(name);
+                    }
+                }
+            }
+            catch { }
+
+            // Nature macros
+            try
+            {
+                var pokemonHeader = Path.Combine(ProjectContext.RootPath, "include", "pokemon.h");
+                if (File.Exists(pokemonHeader))
+                {
+                    foreach (var line in await File.ReadAllLinesAsync(pokemonHeader))
+                    {
+                        var m = Regex.Match(line, @"#define\s+(NATURE_[A-Z_]+)\s*\(\d+\)");
+                        if (!m.Success) continue;
+                        var name = m.Groups[1].Value;
+                        if (!_natureMacros.Contains(name)) _natureMacros.Add(name);
+                    }
+                }
+            }
+            catch { }
+
+            // Ball macros: heuristic gather from ItemMacros if defined as BALL_
+            _ballMacros = ItemMacros.Where(i => i.StartsWith("ITEM_", StringComparison.Ordinal) && (i.Contains("BALL") || i.EndsWith("_BALL")).Equals(true)).ToList();
 
             // tmlearnset.txt headers list for display
             _tmhmMoves = new();

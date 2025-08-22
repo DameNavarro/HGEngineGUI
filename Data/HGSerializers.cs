@@ -433,7 +433,7 @@ namespace HGEngineGUI.Data
         }
 
         // Save trainer header for a given trainer id inside armips/data/trainers/trainers.s
-        public static async Task SaveTrainerHeaderAsync(int trainerId, string trainerClass, string aiFlags, string battleType, List<string> items)
+        public static async Task SaveTrainerHeaderAsync(int trainerId, string trainerClass, string aiFlags, string battleType, List<string> items, string trainerDataTypeFlags)
         {
             if (ProjectContext.RootPath == null) return;
             var path = HGParsers.PathTrainers ?? Path.Combine(ProjectContext.RootPath, "armips", "data", "trainers", "trainers.s");
@@ -449,7 +449,7 @@ namespace HGEngineGUI.Data
             var sb = new StringBuilder();
             var nummonsMatch = Regex.Match(body, @"nummons\s+(?<v>\d+)");
             var nummons = nummonsMatch.Success ? nummonsMatch.Groups["v"].Value : "0";
-            sb.AppendLine($"\n    trainermontype TRAINER_DATA_TYPE_NOTHING");
+            sb.AppendLine($"\n    trainermontype {trainerDataTypeFlags}");
             sb.AppendLine($"    trainerclass {trainerClass}");
             sb.AppendLine($"    nummons {nummons}");
             for (int i = 0; i < 4; i++)
@@ -507,9 +507,37 @@ namespace HGEngineGUI.Data
                 if (row.Form != 0) sb.AppendLine($"        form {row.Form}");
                 if (!string.IsNullOrWhiteSpace(row.Ball)) sb.AppendLine($"        ball {row.Ball}");
                 if (row.ShinyLock) sb.AppendLine($"        shinylock 1");
+                // Additional flags and fields
+                int af = row.AdditionalFlags;
+                if (af == 0)
+                {
+                    if (row.Status != 0) af |= 0x01;
+                    if (row.Hp != 0) af |= 0x02;
+                    if (row.Atk != 0) af |= 0x04;
+                    if (row.Def != 0) af |= 0x08;
+                    if (row.Speed != 0) af |= 0x10;
+                    if (row.SpAtk != 0) af |= 0x20;
+                    if (row.SpDef != 0) af |= 0x40;
+                    if (!string.IsNullOrWhiteSpace(row.PPCounts)) af |= 0x80;
+                    if (!string.IsNullOrWhiteSpace(row.Nickname)) af |= 0x100;
+                }
+                if (af != 0) sb.AppendLine($"        additionalflags 0x{af:X}");
+                if (row.Status != 0) sb.AppendLine($"        status {row.Status}");
+                if (row.Hp != 0) sb.AppendLine($"        stathp {row.Hp}");
+                if (row.Atk != 0) sb.AppendLine($"        statatk {row.Atk}");
+                if (row.Def != 0) sb.AppendLine($"        statdef {row.Def}");
+                if (row.Speed != 0) sb.AppendLine($"        statspeed {row.Speed}");
+                if (row.SpAtk != 0) sb.AppendLine($"        statspatk {row.SpAtk}");
+                if (row.SpDef != 0) sb.AppendLine($"        statspdef {row.SpDef}");
+                if (!string.IsNullOrWhiteSpace(row.Type1) || !string.IsNullOrWhiteSpace(row.Type2))
+                {
+                    var t1 = string.IsNullOrWhiteSpace(row.Type1) ? "TYPE_NORMAL" : row.Type1;
+                    var t2 = string.IsNullOrWhiteSpace(row.Type2) ? t1 : row.Type2;
+                    sb.AppendLine($"        types {t1}, {t2}");
+                }
+                if (!string.IsNullOrWhiteSpace(row.PPCounts)) sb.AppendLine($"        ppcounts {row.PPCounts}");
                 if (!string.IsNullOrWhiteSpace(row.Nickname)) sb.AppendLine($"        nickname \"{row.Nickname}\"");
-                if (!string.IsNullOrWhiteSpace(row.PP)) sb.AppendLine($"        pp {row.PP}");
-                sb.AppendLine($"        ballseal 0");
+                sb.AppendLine($"        ballseal {row.BallSeal}");
                 sb.AppendLine();
             }
             sb.AppendLine("    endparty");
