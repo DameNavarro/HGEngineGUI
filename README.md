@@ -15,12 +15,14 @@ GUI editor for the HG Engine project. It provides a modern Windows app to browse
   - **Level‑up, Evolutions, Egg Moves**: Summaries are displayed; Preview/Save are available. (These were simplified to ensure stability in packaged builds.)
 
 - **Trainers editor**
-  - Stable detail layout including Moves, Nature, Form, Ball, Shiny Lock, PP, Nickname.
-  - Preview and Save supported.
-
-- **Safety and diagnostics**
-  - Global crash dialog with logs written to app LocalState (`last_crash.txt`, `first_chance.log`).
-  - Keyboard shortcut: `Ctrl+S` on editor pages.
+  - **Overview (trainer header)**: Class, Items (x4), AI Flags (multi‑select dialog + toolbar buttons), Battle Type. The `trainermontype` flags are auto‑computed from your edits (moves/items/ability/ball/nature/shiny/IV‑EV/extra fields). Preview/Save header supported.
+  - **Party editor (per‑Pokémon cards)**
+    - **Basics**: Slot, Species, Level, IVs, AbilitySlot, Item.
+    - **Moves**: Move 1–4.
+    - **Details**: Nature (dropdown), Form, Ball (dropdown), Shiny Lock.
+    - **Advanced (collapsible)**: Ability, BallSeal, IV/EV arrays, per‑stat overrides (stathp/statatk/statdef/statspeed/statspatk/statspdef), Status, Types, PP Counts, Nickname. The correct `additionalflags` mask and field macros are written automatically on Save.
+  - **Live header summary**: the `mons=` count updates as you add/remove party rows; header reflects current Class/AI/Type selections.
+  - **Preview/Save**: Preview Party changes and Save Party; global `Ctrl+S` works on this page as well.
 
 ### Data mapping (sources/targets)
 
@@ -36,12 +38,14 @@ GUI editor for the HG Engine project. It provides a modern Windows app to browse
 ### Install (packaged MSIX)
 
 1. Download the release `.msix`/`.msixbundle` and the accompanying `.cer` (test certificate) if provided.
-2. Install the certificate:
+2. If your release includes `install.ps1`/`install.bat`, you can run `install.bat` to import the cert and install in one step.
+3. Load HGEngine GUI program that was installed
+
+Optional:Install the certificate:
    - Double‑click the `.cer` → Install Certificate → Local Machine → Place in store → Trusted People.
    - Repeat for the Trusted Root Certification Authorities store if required by your system.
    - Alternatively, use your organization’s signing certificate and skip this step.
-3. Install the app: double‑click the `.msix`/`.msixbundle` and follow the prompt.
-4. Optional: If your release includes `install.ps1`/`install.bat`, you can run `install.bat` to import the cert and install in one step.
+   - Install the app: double‑click the `.msix`/`.msixbundle` and follow the prompt.
 
 ### Build from source
 
