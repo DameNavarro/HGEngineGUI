@@ -334,12 +334,230 @@ namespace HGEngineGUI.Data
         private static Dictionary<string,int> _moveValues = new(StringComparer.Ordinal);
         public static bool TryGetItemValue(string macro, out int value) => _itemValues.TryGetValue(macro, out value);
         public static bool TryGetMoveValue(string macro, out int value) => _moveValues.TryGetValue(macro, out value);
+        // Items and prices
+        public static IReadOnlyList<(string ItemMacro, int Price)> ItemsWithPrices => _itemsWithPrices;
+        private static List<(string ItemMacro, int Price)> _itemsWithPrices = new();
+        public static string? PathItemData { get; private set; }
+        public static string? PathMartItems { get; private set; }
+        public static bool HasMartItems => PathMartItems != null && System.IO.File.Exists(PathMartItems);
         public static IReadOnlyCollection<string> TmHmSelectedForSpecies => _tmhmSelectedForSpecies;
         private static HashSet<string> _tmhmSelectedForSpecies = new();
         public static IReadOnlyList<(string tutor, string move, int cost)> TutorHeaders => _tutorHeaders;
         private static List<(string tutor, string move, int cost)> _tutorHeaders = new();
         public static IReadOnlyCollection<string> TutorSelectedForSpecies => _tutorSelectedForSpecies;
         private static HashSet<string> _tutorSelectedForSpecies = new();
+
+        // Encounters
+        public class EncounterSlot
+        {
+            public string SpeciesMacro { get; set; } = string.Empty;
+            public int MinLevel { get; set; }
+            public int MaxLevel { get; set; }
+            public EncounterSlot() {}
+            public EncounterSlot(string species, int min, int max) { SpeciesMacro = species; MinLevel = min; MaxLevel = max; }
+        }
+        public class EncounterArea
+        {
+            public int Id { get; set; }
+            public string Label { get; set; } = string.Empty;
+            public int WalkRate { get; set; }
+            public int SurfRate { get; set; }
+            public int RockSmashRate { get; set; }
+            public int OldRodRate { get; set; }
+            public int GoodRodRate { get; set; }
+            public int SuperRodRate { get; set; }
+            public int[] WalkLevels { get; set; } = new int[12];
+            // Editable probability distributions (percent) shown in UI and written as comments.
+            public int[] GrassProbabilities { get; set; } = new int[] { 20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1 };
+            public int[] SurfProbabilities { get; set; } = new int[] { 60, 30, 5, 4, 1 };
+            public int[] RockProbabilities { get; set; } = new int[] { 90, 10 };
+            public int[] OldRodProbabilities { get; set; } = new int[] { 60, 30, 5, 4, 1 };
+            public int[] GoodRodProbabilities { get; set; } = new int[] { 40, 40, 15, 4, 1 };
+            public int[] SuperRodProbabilities { get; set; } = new int[] { 40, 40, 15, 4, 1 };
+            public List<string> MorningGrass { get; set; } = new();
+            public List<string> DayGrass { get; set; } = new();
+            public List<string> NightGrass { get; set; } = new();
+            public List<string> HoennGrass { get; set; } = new();
+            public List<string> SinnohGrass { get; set; } = new();
+            public List<EncounterSlot> Surf { get; set; } = new();
+            public List<EncounterSlot> RockSmash { get; set; } = new();
+            public List<EncounterSlot> OldRod { get; set; } = new();
+            public List<EncounterSlot> GoodRod { get; set; } = new();
+            public List<EncounterSlot> SuperRod { get; set; } = new();
+            public string SwarmGrass { get; set; } = string.Empty;
+            public string SwarmSurf { get; set; } = string.Empty;
+            public string SwarmGoodRod { get; set; } = string.Empty;
+            public string SwarmSuperRod { get; set; } = string.Empty;
+        }
+        public static IReadOnlyList<EncounterArea> EncounterAreas => _encounterAreas;
+        private static List<EncounterArea> _encounterAreas = new();
+
+        public static string? PathEncounters { get; private set; }
+        public static string? PathHeadbutt { get; private set; }
+        // Mart editor
+        public class MartItemEntry
+        {
+            public string Item { get; set; } = string.Empty; // ITEM_*
+            public string? BadgeMacro { get; set; } // ZERO_BADGES..EIGHT_BADGES for general table
+        }
+        public class MartSection
+        {
+            public string Key { get; set; } = string.Empty; // .org address string like 0x020FBA54
+            public string Label { get; set; } = string.Empty; // friendly label from comments or address fallback
+            public bool IsGeneralTable { get; set; }
+            public List<MartItemEntry> Items { get; set; } = new();
+        }
+        public static IReadOnlyList<MartSection> MartSections => _martSections;
+        private static List<MartSection> _martSections = new();
+
+        public static async Task RefreshEncountersAsync()
+        {
+            _encounterAreas = new();
+            if (ProjectContext.RootPath == null) return;
+            var path = PathEncounters ?? Path.Combine(ProjectContext.RootPath, "armips", "data", "encounters.s");
+            if (!File.Exists(path)) return;
+
+            var text = await File.ReadAllTextAsync(path);
+            text = text.Replace("\r\n", "\n");
+            // Capture optional inline label comment safely up to end of line
+            var blocks = Regex.Matches(text, @"encounterdata\s+(?<id>\d+)\s*(?:\/\/\s*(?<label>[^\n\r]*))?(?<body>[\s\S]*?)\.close", RegexOptions.Multiline);
+            foreach (Match b in blocks)
+            {
+                var area = new EncounterArea
+                {
+                    Id = int.Parse(b.Groups["id"].Value),
+                    Label = b.Groups["label"].Value.Trim(),
+                };
+
+                var body = b.Groups["body"].Value;
+                area.WalkRate = ReadInt(body, @"walkrate\s+(?<v>\d+)");
+                area.SurfRate = ReadInt(body, @"surfrate\s+(?<v>\d+)");
+                area.RockSmashRate = ReadInt(body, @"rocksmashrate\s+(?<v>\d+)");
+                area.OldRodRate = ReadInt(body, @"oldrodrate\s+(?<v>\d+)");
+                area.GoodRodRate = ReadInt(body, @"goodrodrate\s+(?<v>\d+)");
+                area.SuperRodRate = ReadInt(body, @"superrodrate\s+(?<v>\d+)");
+
+                var wl = Regex.Match(body, @"walklevels\s+(?<vals>[\d,\s]+)");
+                if (wl.Success)
+                {
+                    var nums = wl.Groups["vals"].Value.Split(',').Select(s => int.TryParse(s.Trim(), out var v) ? v : 0).ToArray();
+                    for (int i = 0; i < Math.Min(12, nums.Length); i++) area.WalkLevels[i] = nums[i];
+                }
+
+                // Helper to parse 12 pokemon lines for each grass time block
+                List<string> Parse12(string tag)
+                {
+                    var list = new List<string>(12);
+                    var rx = new Regex(@"//\s*" + tag + @"[\s\S]*?(?<lines>(?:\s*pokemon\s+SPECIES_[A-Z0-9_]+\s*\n){1,12})", RegexOptions.Multiline);
+                    var m = rx.Match(body);
+                    if (m.Success)
+                    {
+                        var lr = new Regex(@"pokemon\s+(?<sp>SPECIES_[A-Z0-9_]+)");
+                        foreach (Match mm in lr.Matches(m.Groups["lines"].Value)) list.Add(mm.Groups["sp"].Value);
+                    }
+                    return list;
+                }
+
+                area.MorningGrass = Parse12("morning encounter slots");
+                area.DayGrass = Parse12("day encounter slots");
+                area.NightGrass = Parse12("night encounter slots");
+                area.HoennGrass = Parse12("hoenn encounter slots");
+                area.SinnohGrass = Parse12("sinnoh encounter slots");
+
+                // Encounter slots helper
+                List<EncounterSlot> ParseEncounters(string header)
+                {
+                    var list = new List<EncounterSlot>();
+                    var rx = new Regex(@"//\s*" + header + @"[\s\S]*?(?<lines>(?:\s*encounter\s+SPECIES_[A-Z0-9_]+\s*,\s*\d+\s*,\s*\d+\s*\n){1,100})", RegexOptions.Multiline);
+                    var m = rx.Match(body);
+                    if (m.Success)
+                    {
+                        var lr = new Regex(@"encounter\s+(?<sp>SPECIES_[A-Z0-9_]+)\s*,\s*(?<min>\d+)\s*,\s*(?<max>\d+)");
+                        foreach (Match mm in lr.Matches(m.Groups["lines"].Value))
+                        {
+                            list.Add(new EncounterSlot(mm.Groups["sp"].Value, int.Parse(mm.Groups["min"].Value), int.Parse(mm.Groups["max"].Value)));
+                        }
+                    }
+                    return list;
+                }
+
+                area.Surf = ParseEncounters("surf encounters");
+                area.RockSmash = ParseEncounters("rock smash encounters");
+                area.OldRod = ParseEncounters("old rod encounters");
+                area.GoodRod = ParseEncounters("good rod encounters");
+                area.SuperRod = ParseEncounters("super rod encounters");
+
+                area.SwarmGrass = ReadSpecies(body, @"//\s*swarm grass\s*\n\s*pokemon\s+(?<sp>SPECIES_[A-Z0-9_]+)");
+                area.SwarmSurf = ReadSpecies(body, @"//\s*swarm surf\s*\n\s*pokemon\s+(?<sp>SPECIES_[A-Z0-9_]+)");
+                area.SwarmGoodRod = ReadSpecies(body, @"//\s*swarm good rod\s*\n\s*pokemon\s+(?<sp>SPECIES_[A-Z0-9_]+)");
+                area.SwarmSuperRod = ReadSpecies(body, @"//\s*swarm super rod\s*\n\s*pokemon\s+(?<sp>SPECIES_[A-Z0-9_]+)");
+
+                _encounterAreas.Add(area);
+            }
+        }
+
+        private static int ReadInt(string body, string pattern)
+        {
+            var m = Regex.Match(body, pattern);
+            return m.Success ? int.Parse(m.Groups["v"].Value) : 0;
+        }
+
+        private static string ReadSpecies(string body, string pattern)
+        {
+            var m = Regex.Match(body, pattern);
+            return m.Success ? m.Groups["sp"].Value : string.Empty;
+        }
+
+        // Headbutt parsing
+        public class HeadbuttArea
+        {
+            public int Id { get; set; }
+            public int NormalCount { get; set; }
+            public int SpecialCount { get; set; }
+            public List<EncounterSlot> Normal { get; set; } = new();
+            public List<EncounterSlot> Special { get; set; } = new();
+        }
+        public static IReadOnlyDictionary<int, HeadbuttArea> HeadbuttAreas => _headbuttAreas;
+        private static Dictionary<int, HeadbuttArea> _headbuttAreas = new();
+
+        public static async Task RefreshHeadbuttAsync()
+        {
+            _headbuttAreas = new();
+            if (ProjectContext.RootPath == null) return;
+            var path = PathHeadbutt ?? Path.Combine(ProjectContext.RootPath, "armips", "data", "headbutt.s");
+            if (!File.Exists(path)) return;
+            var text = await File.ReadAllTextAsync(path);
+            text = text.Replace("\r\n", "\n");
+            var blocks = Regex.Matches(text, @"headbuttheader\s+(?<id>\d+)\s*,\s*(?<n>\d+)\s*,\s*(?<s>\d+)(?<body>[\s\S]*?)\.close", RegexOptions.Multiline);
+            foreach (Match b in blocks)
+            {
+                int id = int.Parse(b.Groups["id"].Value);
+                int n = int.Parse(b.Groups["n"].Value);
+                int s = int.Parse(b.Groups["s"].Value);
+                var area = new HeadbuttArea { Id = id, NormalCount = n, SpecialCount = s };
+                var body = b.Groups["body"].Value;
+                // Normal slots appear after '// normal slots'
+                var normalMatch = Regex.Match(body, @"//\s*normal slots(?<lines>[\s\S]*?)//\s*special slots", RegexOptions.Multiline);
+                if (normalMatch.Success)
+                {
+                    var lr = new Regex(@"headbuttencounter\s+(?<sp>SPECIES_[A-Z0-9_]+)\s*,\s*(?<min>\d+)\s*,\s*(?<max>\d+)");
+                    foreach (Match mm in lr.Matches(normalMatch.Groups["lines"].Value))
+                    {
+                        area.Normal.Add(new EncounterSlot(mm.Groups["sp"].Value, int.Parse(mm.Groups["min"].Value), int.Parse(mm.Groups["max"].Value)));
+                    }
+                }
+                var specialMatch = Regex.Match(body, @"//\s*special slots(?<lines>[\s\S]*?)//\s*normal trees|$", RegexOptions.Multiline);
+                if (specialMatch.Success)
+                {
+                    var lr = new Regex(@"headbuttencounter\s+(?<sp>SPECIES_[A-Z0-9_]+)\s*,\s*(?<min>\d+)\s*,\s*(?<max>\d+)");
+                    foreach (Match mm in lr.Matches(specialMatch.Groups["lines"].Value))
+                    {
+                        area.Special.Add(new EncounterSlot(mm.Groups["sp"].Value, int.Parse(mm.Groups["min"].Value), int.Parse(mm.Groups["max"].Value)));
+                    }
+                }
+                _headbuttAreas[id] = area;
+            }
+        }
 
         public static async Task RefreshCachesAsync()
         {
@@ -628,6 +846,146 @@ namespace HGEngineGUI.Data
                     var header = m.Value.Trim();
                     if (!_tmhmMoves.Contains(header)) _tmhmMoves.Add(header);
                 }
+            }
+
+            // Items with prices from data/itemdata/itemdata.c (.price fields by index)
+            _itemsWithPrices = new();
+            if (PathItemData != null && File.Exists(PathItemData))
+            {
+                try
+                {
+                    var text = await File.ReadAllTextAsync(PathItemData);
+                    text = text.Replace("\r\n", "\n");
+                    // Find entries of the form: [ITEM_*] = { ... .price = N,
+                    var entryRx = new Regex(@"\[(?<item>ITEM_[A-Z0-9_]+)\]\s*=\s*\{(?<body>[\s\S]*?)\}", RegexOptions.Multiline);
+                    foreach (Match em in entryRx.Matches(text))
+                    {
+                        string item = em.Groups["item"].Value;
+                        var body = em.Groups["body"].Value;
+                        var pm = Regex.Match(body, @"\.price\s*=\s*(?<p>\d+)");
+                        int price = pm.Success ? int.Parse(pm.Groups["p"].Value) : 0;
+                        _itemsWithPrices.Add((item, price));
+                    }
+                    // fallback: sort by enum value using _itemValues if available
+                    if (_itemValues.Count > 0)
+                        _itemsWithPrices = _itemsWithPrices.OrderBy(t => _itemValues.TryGetValue(t.ItemMacro, out var v) ? v : int.MaxValue).ToList();
+                }
+                catch { }
+            }
+
+            // Parse mart_items.s sections (if present)
+            _martSections = new();
+            if (HasMartItems && PathMartItems != null)
+            {
+                try
+                {
+                    var lines = await File.ReadAllTextAsync(PathMartItems);
+                    lines = lines.Replace("\r\n", "\n");
+                    var secRx = new Regex(@"^\s*\.org\s+(?<addr>0x[0-9A-Fa-f]+)(?<body>[\s\S]*?)(?=^\s*\.org|\Z)", RegexOptions.Multiline);
+                    foreach (Match sm in secRx.Matches(lines))
+                    {
+                        var addr = sm.Groups["addr"].Value;
+                        var body = sm.Groups["body"].Value;
+                        string label = string.Empty;
+                        // Find descriptive comment: first try above, then a few lines below the .org
+                        {
+                            bool found = false;
+                            int cursor = sm.Index - 1;
+                            for (int attempts = 0; attempts < 8 && cursor > 0; attempts++)
+                            {
+                                int lineStart = lines.LastIndexOf('\n', Math.Max(0, cursor - 1));
+                                if (lineStart < 0) lineStart = 0;
+                                string line = lines.Substring(lineStart, cursor - lineStart).Trim();
+                                if (!string.IsNullOrEmpty(line))
+                                {
+                                    var m = Regex.Match(line, @"^/\*\s*(?<lbl>[^*/][^{}]*?)\s*\*/\s*$");
+                                    if (m.Success &&
+                                        !m.Value.Contains("const u16", StringComparison.OrdinalIgnoreCase) &&
+                                        !m.Value.Contains("spills over", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        label = m.Groups["lbl"].Value.Trim();
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                cursor = lineStart;
+                            }
+                            if (!found)
+                            {
+                                // Look ahead up to 5 lines for an inline label right after .org
+                                int orgLineEnd = lines.IndexOf('\n', sm.Index);
+                                if (orgLineEnd < 0) orgLineEnd = sm.Index;
+                                int lookCursor = orgLineEnd + 1;
+                                for (int attempts = 0; attempts < 5 && lookCursor < lines.Length; attempts++)
+                                {
+                                    int nextEnd = lines.IndexOf('\n', lookCursor);
+                                    if (nextEnd < 0) nextEnd = lines.Length;
+                                    string line = lines.Substring(lookCursor, nextEnd - lookCursor).Trim();
+                                    if (!string.IsNullOrEmpty(line))
+                                    {
+                                        var m = Regex.Match(line, @"^/\*\s*(?<lbl>[^*/][^{}]*?)\s*\*/\s*$");
+                                        if (m.Success &&
+                                            !m.Value.Contains("const u16", StringComparison.OrdinalIgnoreCase) &&
+                                            !m.Value.Contains("spills over", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            label = m.Groups["lbl"].Value.Trim();
+                                            break;
+                                        }
+                                    }
+                                    lookCursor = nextEnd + 1;
+                                }
+                            }
+                        }
+                        // Skip sections with no readable shop label
+                        if (string.IsNullOrWhiteSpace(label))
+                        {
+                            // Exclude anonymous technical sections like 0x020FBB08, 0x020FBBEA, etc.
+                            // Only include if it is the known General Poké Mart Table (address 0x020FBF22)
+                            if (!string.Equals(addr, "0x020FBF22", StringComparison.OrdinalIgnoreCase))
+                                continue;
+                            label = "General Poké Mart Table";
+                        }
+                        var sec = new MartSection { Key = addr, Label = label };
+                        // General table is at 0x020FBF22 in your template
+                        sec.IsGeneralTable = string.Equals(addr, "0x020FBF22", StringComparison.OrdinalIgnoreCase);
+                        // Read .halfword pairs item/badge for general table, else single item entries ending with 0xFFFF
+                        var hwRx = new Regex(@"\.halfword\s+(?<val>[A-Z0-9_]+|0x[0-9A-Fa-f]+)", RegexOptions.Multiline);
+                        var vals = hwRx.Matches(body).Cast<Match>().Select(m => m.Groups["val"].Value).ToList();
+                        if (sec.IsGeneralTable)
+                        {
+                            for (int i = 0; i + 1 < vals.Count; i += 2)
+                            {
+                                var it = vals[i]; var badge = vals[i + 1];
+                                if (it == "0xFFFF") break;
+                                // Normalize known badge macros
+                                if (badge == "TWO_BADGES" || badge == "FOUR_BADGES" || badge == "SIX_BADGES")
+                                {
+                                    // keep as-is
+                                }
+                                else if (badge == "ONE_BADGE" || badge == "THREE_BADGES" || badge == "FIVE_BADGES" || badge == "SEVEN_BADGES" || badge == "EIGHT_BADGES" || badge == "ZERO_BADGES")
+                                {
+                                    // keep as-is
+                                }
+                                else
+                                {
+                                    // fallback if unexpected token appears
+                                    badge = "ZERO_BADGES";
+                                }
+                                sec.Items.Add(new MartItemEntry { Item = it, BadgeMacro = badge });
+                            }
+                        }
+                        else
+                        {
+                            foreach (var v in vals)
+                            {
+                                if (v == "0xFFFF") break;
+                                if (v.StartsWith("ITEM_", StringComparison.Ordinal)) sec.Items.Add(new MartItemEntry { Item = v });
+                            }
+                        }
+                        _martSections.Add(sec);
+                    }
+                }
+                catch { }
             }
         }
 
@@ -943,6 +1301,14 @@ namespace HGEngineGUI.Data
                 ?? FindFile("mondata.s");
             PathTrainers = PreferExisting(Path.Combine(ProjectContext.RootPath, "armips", "data", "trainers", "trainers.s"))
                 ?? FindFile("trainers.s");
+            PathEncounters = PreferExisting(Path.Combine(ProjectContext.RootPath, "armips", "data", "encounters.s"))
+                ?? FindFile("encounters.s");
+            PathHeadbutt = PreferExisting(Path.Combine(ProjectContext.RootPath, "armips", "data", "headbutt.s"))
+                ?? FindFile("headbutt.s");
+            PathItemData = PreferExisting(Path.Combine(ProjectContext.RootPath, "data", "itemdata", "itemdata.c"))
+                ?? FindFile("itemdata.c");
+            PathMartItems = PreferExisting(Path.Combine(ProjectContext.RootPath, "armips", "asm", "custom", "mart_items.s"))
+                ?? FindFile("mart_items.s");
         }
 
         private static string? PreferExisting(string path)

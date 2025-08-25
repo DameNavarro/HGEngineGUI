@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="HGEngineGUI.Pages.EncountersPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+    <Grid Padding="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="8">
+            <TextBox x:Name="SearchBox" Grid.Row="0" PlaceholderText="Search routes/areas" TextChanged="OnSearchChanged" Width="300"/>
+            <ListView Grid.Row="1" x:Name="AreaList" IsItemClickEnabled="True" ItemClick="OnAreaClick"/>
+        </Grid>
+
+        <ScrollViewer Grid.Column="1" Margin="16,0,0,0" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Encounter details" FontWeight="SemiBold"/>
+                <TextBlock x:Name="HeaderText"/>
+                <CommandBar>
+                    <AppBarButton Icon="Refresh" Label="Refresh" Click="OnRefresh"/>
+                    <AppBarButton Icon="PreviewLink" Label="Preview" Click="OnPreview"/>
+                    <AppBarButton Icon="Save" Label="Save" Click="OnSave"/>
+                    <AppBarButton Icon="OpenFile" Label="Open encounters.s" Click="OnOpenFile"/>
+                </CommandBar>
+
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Walk Rate"/>
+                        <TextBox x:Name="WalkRateBox"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Surf Rate"/>
+                        <TextBox x:Name="SurfRateBox"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Rock Smash Rate"/>
+                        <TextBox x:Name="RockRateBox"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Old Rod Rate"/>
+                        <TextBox x:Name="OldRodRateBox"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Good Rod Rate"/>
+                        <TextBox x:Name="GoodRodRateBox"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Super Rod Rate"/>
+                        <TextBox x:Name="SuperRodRateBox"/>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Grass slot levels (12)"/>
+                    <TextBox x:Name="GrassLevelsBox" PlaceholderText="comma-separated e.g. 3,2,3,2,2,2,4,4,3,4,3,4"/>
+                </StackPanel>
+
+                <Expander Header="Grass (Morning/Day/Night)" IsExpanded="True">
+                    <StackPanel Spacing="12">
+                        <StackPanel>
+                            <TextBlock Text="Morning (12)"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="Probs" VerticalAlignment="Center"/>
+                                <TextBox x:Name="MorningProbs" Width="260" PlaceholderText="comma-separated e.g. 20,20,10,..."/>
+                            </StackPanel>
+                            <ItemsControl x:Name="MorningList"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Day (12)"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="Probs" VerticalAlignment="Center"/>
+                                <TextBox x:Name="DayProbs" Width="260"/>
+                            </StackPanel>
+                            <ItemsControl x:Name="DayList"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Night (12)"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="Probs" VerticalAlignment="Center"/>
+                                <TextBox x:Name="NightProbs" Width="260"/>
+                            </StackPanel>
+                            <ItemsControl x:Name="NightList"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+
+                <Expander Header="Hoenn/Sinnoh (special slots)">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <ItemsControl x:Name="HoennList"/>
+                        <ItemsControl x:Name="SinnohList" Grid.Column="1"/>
+                    </Grid>
+                </Expander>
+
+                <Expander Header="Water/Mining" IsExpanded="True">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Surf encounters" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="Probs" VerticalAlignment="Center"/>
+                            <TextBox x:Name="SurfProbs" Width="220"/>
+                        </StackPanel>
+                        <ItemsControl x:Name="SurfList"/>
+                        <TextBlock Text="Rock Smash encounters" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="Probs" VerticalAlignment="Center"/>
+                            <TextBox x:Name="RockProbs" Width="220"/>
+                        </StackPanel>
+                        <ItemsControl x:Name="RockList"/>
+                    </StackPanel>
+                </Expander>
+
+                <Expander Header="Fishing" IsExpanded="False">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Old Rod" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="Probs" VerticalAlignment="Center"/>
+                            <TextBox x:Name="OldRodProbs" Width="220"/>
+                        </StackPanel>
+                        <ItemsControl x:Name="OldRodList"/>
+                        <TextBlock Text="Good Rod" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="Probs" VerticalAlignment="Center"/>
+                            <TextBox x:Name="GoodRodProbs" Width="220"/>
+                        </StackPanel>
+                        <ItemsControl x:Name="GoodRodList"/>
+                        <TextBlock Text="Super Rod" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="Probs" VerticalAlignment="Center"/>
+                            <TextBox x:Name="SuperRodProbs" Width="220"/>
+                        </StackPanel>
+                        <ItemsControl x:Name="SuperRodList"/>
+                    </StackPanel>
+                </Expander>
+
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Swarm Grass"/>
+                        <ComboBox x:Name="SwarmGrassCombo" IsEditable="True"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Swarm Surf"/>
+                        <ComboBox x:Name="SwarmSurfCombo" IsEditable="True"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Swarm Good Rod"/>
+                        <ComboBox x:Name="SwarmGoodRodCombo" IsEditable="True"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="3">
+                        <TextBlock Text="Swarm Super Rod"/>
+                        <ComboBox x:Name="SwarmSuperRodCombo" IsEditable="True"/>
+                    </StackPanel>
+                </Grid>
+
+                
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>
+
+

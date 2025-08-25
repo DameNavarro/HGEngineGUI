@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="HGEngineGUI.Pages.ConfigPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+    <Grid Padding="16" RowDefinitions="Auto,*,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="12">
+            <TextBlock Text="Config file:" VerticalAlignment="Center"/>
+            <TextBlock x:Name="ConfigPathText" VerticalAlignment="Center" FontWeight="SemiBold"/>
+            <Button Content="Reload" Click="OnReloadClick"/>
+            <Button Content="Save" Click="OnSaveClick"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="8">
+                <Expander Header="Core">
+                    <StackPanel Spacing="6" Padding="8">
+                        <CheckBox x:Name="FairyType" Content="Enable Fairy type (FAIRY_TYPE_IMPLEMENTED)"/>
+                        <CheckBox x:Name="HiddenAbilities" Content="Enable Hidden Abilities (HIDDEN_ABILITIES)"/>
+                        <CheckBox x:Name="MegaEvolutions" Content="Enable Mega Evolutions (MEGA_EVOLUTIONS)"/>
+                        <CheckBox x:Name="PrimalReversion" Content="Enable Primal Reversion (PRIMAL_REVERSION)"/>
+                        <CheckBox x:Name="ItemPocketExpansion" Content="Expand Item Pockets (ITEM_POCKET_EXPANSION)"/>
+                        <CheckBox x:Name="BdhcamRoutine" Content="Implement BDHCAM routine (IMPLEMENT_BDHCAM_ROUTINE)"/>
+                        <CheckBox x:Name="TransparentTextboxes" Content="Transparent textboxes (IMPLEMENT_TRANSPARENT_TEXTBOXES)"/>
+                        <CheckBox x:Name="WildDoubleBattles" Content="Wild double battles (IMPLEMENT_WILD_DOUBLE_BATTLES)"/>
+                    </StackPanel>
+                </Expander>
+
+                <Expander Header="Battle/Progression">
+                    <StackPanel Spacing="6" Padding="8">
+                        <CheckBox x:Name="CaptureExperience" Content="Capture grants EXP (IMPLEMENT_CAPTURE_EXPERIENCE)"/>
+                        <CheckBox x:Name="CriticalCapture" Content="Critical capture (IMPLEMENT_CRITICAL_CAPTURE)"/>
+                        <CheckBox x:Name="NewEvIvViewer" Content="EV/IV viewer in summary (IMPLEMENT_NEW_EV_IV_VIEWER)"/>
+                        <CheckBox x:Name="ImplementLevelCap" Content="Enable Level Cap (IMPLEMENT_LEVEL_CAP)"/>
+                        <CheckBox x:Name="UncapCandies" Content="Uncap Rare Candies (UNCAP_CANDIES_FROM_LEVEL_CAP)"/>
+                        <CheckBox x:Name="AllowLevelCapEvolve" Content="Allow evolve at cap with Rare Candy (ALLOW_LEVEL_CAP_EVOLVE)"/>
+                        <CheckBox x:Name="UpdateOverworldPoison" Content="Disable overworld poison (UPDATE_OVERWORLD_POISON)"/>
+                        <CheckBox x:Name="DisableEndOfTurnWeatherMsg" Content="Hide end-of-turn weather messages (DISABLE_END_OF_TURN_WEATHER_MESSAGE)"/>
+                        <CheckBox x:Name="ExpandPcBoxes" Content="Expand PC boxes to 30 (EXPAND_PC_BOXES)"/>
+                        <CheckBox x:Name="FriendshipEffects" Content="Friendship effects enabled (FRIENDSHIP_EFFECTS)"/>
+                        <CheckBox x:Name="RestoreItemsAfterBattle" Content="Restore single-use items after battle (RESTORE_ITEMS_AT_BATTLE_END)"/>
+                        <CheckBox x:Name="ReusableRepels" Content="Reusable Repels (IMPLEMENT_REUSABLE_REPELS)"/>
+                        <CheckBox x:Name="UpdateVitaminEvCaps" Content="Update Vitamin EV caps (UPDATE_VITAMIN_EV_CAPS)"/>
+                        <CheckBox x:Name="DisableItemsInTrainerBattle" Content="Disable items in trainer battles (DISABLE_ITEMS_IN_TRAINER_BATTLE)"/>
+                        <CheckBox x:Name="ReusableTms" Content="Reusable TMs (REUSABLE_TMS)"/>
+                        <CheckBox x:Name="StaticHpBar" Content="Static HP bar speed (STATIC_HP_BAR)"/>
+                    </StackPanel>
+                </Expander>
+
+                <Expander Header="Other">
+                    <StackPanel Spacing="6" Padding="8">
+                        <CheckBox x:Name="AllowSaveChanges" Content="Allow save field expansions (ALLOW_SAVE_CHANGES)"/>
+                        <CheckBox x:Name="ImplementSeasons" Content="Implement seasons mechanics (IMPLEMENT_SEASONS)"/>
+                        <CheckBox x:Name="ImplementDexitForms" Content="Enable dexit/legacy forms mechanics (IMPLEMENT_DEXIT_FORMS_MECHANICS)"/>
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
+
+        <TextBlock Grid.Row="2" Foreground="Gray" Text="Changes create a .bak before saving."/>
+    </Grid>
+</Page>
+
+

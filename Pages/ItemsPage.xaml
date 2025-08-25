@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="HGEngineGUI.Pages.ItemsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+    <Grid Padding="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="8">
+            <TextBox x:Name="SearchBox" Grid.Row="0" PlaceholderText="Search items" TextChanged="OnSearchChanged" Width="300"/>
+            <ListView Grid.Row="1" x:Name="ItemList" IsItemClickEnabled="True" ItemClick="OnItemClick"/>
+        </Grid>
+
+        <ScrollViewer Grid.Column="1" Margin="16,0,0,0" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Items" FontWeight="SemiBold"/>
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="SelectedItemText" Grid.Column="0"/>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Price"/>
+                        <TextBox x:Name="PriceBox"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom">
+                        <Button Content="Preview" Click="OnPreviewPrices"/>
+                        <Button Content="Save" Click="OnSavePrices"/>
+                    </StackPanel>
+                </Grid>
+
+                <Expander x:Name="MartExpander" Header="Mart Items (custom addon)" IsExpanded="False">
+                    <StackPanel Spacing="8">
+                        <TextBlock x:Name="MartStatus"/>
+                        <ComboBox x:Name="MartSectionCombo" PlaceholderText="Select section" SelectionChanged="OnMartSectionChanged"/>
+                        <ItemsControl x:Name="MartItemsControl"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button Content="Preview Marts" Click="OnPreviewMarts"/>
+                            <Button Content="Save Marts" Click="OnSaveMarts"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>
+
+

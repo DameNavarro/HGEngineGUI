@@ -42,6 +42,15 @@ namespace HGEngineGUI
                     case "Trainers":
                         ContentFrame.Navigate(typeof(Pages.TrainersPage));
                         break;
+                    case "Items":
+                        ContentFrame.Navigate(typeof(Pages.ItemsPage));
+                        break;
+                    case "Encounters":
+                        ContentFrame.Navigate(typeof(Pages.EncountersPage));
+                        break;
+                    case "Config":
+                        ContentFrame.Navigate(typeof(Pages.ConfigPage));
+                        break;
                     // Learnsets/Evolutions are accessible under the Pokémon page; no direct nav needed.
                 }
                 UpdateStatus($"Navigated: {item.Content}");

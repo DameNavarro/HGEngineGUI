@@ -34,6 +34,153 @@ namespace HGEngineGUI.Data
             }
             return sb.ToString();
         }
+
+        // Items: preview/save price changes into data/itemdata/itemdata.c
+        public static async Task<string> PreviewItemPricesAsync(List<(string ItemMacro, int Price)> entries)
+        {
+            if (ProjectContext.RootPath == null) return string.Empty;
+            var path = HGParsers.PathItemData ?? System.IO.Path.Combine(ProjectContext.RootPath, "data", "itemdata", "itemdata.c");
+            if (!System.IO.File.Exists(path)) return string.Empty;
+            var original = await System.IO.File.ReadAllTextAsync(path);
+            var updated = original;
+            foreach (var (item, price) in entries)
+            {
+                var rx = new System.Text.RegularExpressions.Regex(@"(\[\s*" + System.Text.RegularExpressions.Regex.Escape(item) + @"\s*\]\s*=\s*\{[\s\S]*?\.price\s*=\s*)(\d+)", System.Text.RegularExpressions.RegexOptions.Multiline);
+                updated = rx.Replace(updated, m => m.Groups[1].Value + price.ToString(), 1);
+            }
+            return ComputeUnifiedDiff(original, updated, "itemdata.c");
+        }
+
+        public static async Task SaveItemPricesAsync(List<(string ItemMacro, int Price)> entries)
+        {
+            if (ProjectContext.RootPath == null) return;
+            var path = HGParsers.PathItemData ?? System.IO.Path.Combine(ProjectContext.RootPath, "data", "itemdata", "itemdata.c");
+            if (!System.IO.File.Exists(path)) return;
+            var text = await System.IO.File.ReadAllTextAsync(path);
+            foreach (var (item, price) in entries)
+            {
+                var rx = new System.Text.RegularExpressions.Regex(@"(\[\s*" + System.Text.RegularExpressions.Regex.Escape(item) + @"\s*\]\s*=\s*\{[\s\S]*?\.price\s*=\s*)(\d+)", System.Text.RegularExpressions.RegexOptions.Multiline);
+                text = rx.Replace(text, m => m.Groups[1].Value + price.ToString(), 1);
+            }
+            var backup = path + ".bak";
+            try { System.IO.File.Copy(path, backup, true); } catch { }
+            await System.IO.File.WriteAllTextAsync(path, text);
+            HGEngineGUI.Services.ChangeLog.Record(path, text.Length);
+        }
+
+        // Mart items: preview/save by reconstructing .halfword sequences inside armips/asm/custom/mart_items.s
+        public static async Task<string> PreviewMartItemsAsync(List<HGEngineGUI.Data.HGParsers.MartSection> sections)
+        {
+            if (ProjectContext.RootPath == null) return string.Empty;
+            var path = HGEngineGUI.Data.HGParsers.PathMartItems ?? System.IO.Path.Combine(ProjectContext.RootPath, "armips", "asm", "custom", "mart_items.s");
+            if (!System.IO.File.Exists(path)) return string.Empty;
+            var original = await System.IO.File.ReadAllTextAsync(path);
+            string updated = ReplaceMartSections(original, sections);
+            return ComputeUnifiedDiff(original, updated, "mart_items.s");
+        }
+
+        public static async Task SaveMartItemsAsync(List<HGEngineGUI.Data.HGParsers.MartSection> sections)
+        {
+            if (ProjectContext.RootPath == null) return;
+            var path = HGEngineGUI.Data.HGParsers.PathMartItems ?? System.IO.Path.Combine(ProjectContext.RootPath, "armips", "asm", "custom", "mart_items.s");
+            if (!System.IO.File.Exists(path)) return;
+            var text = await System.IO.File.ReadAllTextAsync(path);
+            var updated = ReplaceMartSections(text, sections);
+            var backup = path + ".bak";
+            try { System.IO.File.Copy(path, backup, true); } catch { }
+            await System.IO.File.WriteAllTextAsync(path, updated);
+            HGEngineGUI.Services.ChangeLog.Record(path, updated.Length);
+        }
+
+        private static string ReplaceMartSections(string text, List<HGEngineGUI.Data.HGParsers.MartSection> sections)
+        {
+            // Normalize line endings for robust matching
+            bool hadCrLf = text.Contains("\r\n");
+            string normalized = hadCrLf ? text.Replace("\r\n", "\n") : text;
+            var lines = normalized.Split('\n').ToList();
+
+            foreach (var sec in sections)
+            {
+                // Locate all header lines for this section: ".org <address>" (handle prior duplicates)
+                var headerIndices = new List<int>();
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    var ltrim = lines[i].TrimStart();
+                    if (!ltrim.StartsWith(".org ", StringComparison.OrdinalIgnoreCase)) continue;
+                    var afterOrg = ltrim.Substring(5).Trim();
+                    if (afterOrg.StartsWith(sec.Key, StringComparison.OrdinalIgnoreCase)) headerIndices.Add(i);
+                }
+                if (headerIndices.Count == 0) continue; // only replace existing, never append
+                int headerIdx = headerIndices[0];
+
+                // Determine the inventory body as contiguous .halfword lines (allowing blank lines) after header
+                int bodyStart = headerIdx + 1;
+                // keep existing blank line immediately after header as part of body range
+                int bodyEndExclusive = bodyStart;
+                while (bodyEndExclusive < lines.Count)
+                {
+                    var trim = lines[bodyEndExclusive].TrimStart();
+                    if (trim.Length == 0 || trim.StartsWith(".halfword ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        bodyEndExclusive++;
+                        continue;
+                    }
+                    break; // stop at first non-blank, non-.halfword line to preserve comments and next sections
+                }
+
+                // Build new body (preserve one blank line after header if originally present)
+                bool hadBlankAfterHeader = (bodyStart < lines.Count) && lines[bodyStart].Trim().Length == 0;
+                var newBody = new List<string>();
+                if (hadBlankAfterHeader) newBody.Add(string.Empty);
+                if (sec.IsGeneralTable)
+                {
+                    foreach (var it in sec.Items)
+                    {
+                        var badge = string.IsNullOrWhiteSpace(it.BadgeMacro) ? "ZERO_BADGES" : it.BadgeMacro;
+                        newBody.Add($".halfword {it.Item}");
+                        newBody.Add($".halfword {badge}");
+                        newBody.Add(string.Empty);
+                    }
+                    // Trim possible trailing extra blank line to match style
+                    while (newBody.Count > 0 && newBody[^1].Length == 0) newBody.RemoveAt(newBody.Count - 1);
+                }
+                else
+                {
+                    foreach (var it in sec.Items)
+                        newBody.Add($".halfword {it.Item}");
+                    newBody.Add($".halfword 0xFFFF");
+                }
+
+                // Replace in place: keep header line and everything else; swap the body range
+                int removeCount = Math.Max(0, bodyEndExclusive - bodyStart);
+                lines.RemoveRange(bodyStart, removeCount);
+                lines.InsertRange(bodyStart, newBody);
+
+                // Remove any subsequent duplicate blocks for the same address entirely
+                // Scan indices again since list changed length
+                for (int k = lines.Count - 1; k >= 0; k--)
+                {
+                    var ltrim = lines[k].TrimStart();
+                    if (!ltrim.StartsWith(".org ", StringComparison.OrdinalIgnoreCase)) continue;
+                    var afterOrg = ltrim.Substring(5).Trim();
+                    if (!afterOrg.StartsWith(sec.Key, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (k == headerIdx) continue; // keep the first (edited) block
+
+                    int dupStart = k;
+                    int dupEndExclusive = dupStart + 1;
+                    while (dupEndExclusive < lines.Count)
+                    {
+                        var tline = lines[dupEndExclusive].TrimStart();
+                        if (tline.StartsWith(".org ", StringComparison.OrdinalIgnoreCase) || tline.StartsWith(".close", StringComparison.OrdinalIgnoreCase)) break;
+                        dupEndExclusive++;
+                    }
+                    lines.RemoveRange(dupStart, dupEndExclusive - dupStart);
+                }
+            }
+
+            string result = string.Join("\n", lines);
+            return hadCrLf ? result.Replace("\n", "\r\n") : result;
+        }
         // Save Level-up section for a species in armips/data/levelupdata.s
         public static async Task SaveLevelUpAsync(string speciesMacro, List<(int level, string move)> entries)
         {
@@ -430,6 +577,88 @@ namespace HGEngineGUI.Data
             var backup = path + ".bak";
             try { File.Copy(path, backup, true); } catch { }
             await File.WriteAllTextAsync(path, updated);
+        }
+
+        // Encounters: save one encounter area block back into armips/data/encounters.s
+        public static async Task<string> PreviewEncounterAreaAsync(HGParsers.EncounterArea area)
+        {
+            if (ProjectContext.RootPath == null) return string.Empty;
+            var path = HGParsers.PathEncounters ?? System.IO.Path.Combine(ProjectContext.RootPath, "armips", "data", "encounters.s");
+            if (!System.IO.File.Exists(path)) return string.Empty;
+            var original = await System.IO.File.ReadAllTextAsync(path);
+            string updated = ReplaceEncounterBlock(original, area);
+            return ComputeUnifiedDiff(original, updated, "encounters.s");
+        }
+
+        public static async Task SaveEncounterAreaAsync(HGParsers.EncounterArea area)
+        {
+            if (ProjectContext.RootPath == null) return;
+            var path = HGParsers.PathEncounters ?? System.IO.Path.Combine(ProjectContext.RootPath, "armips", "data", "encounters.s");
+            if (!System.IO.File.Exists(path)) return;
+            var text = await System.IO.File.ReadAllTextAsync(path);
+            var updated = ReplaceEncounterBlock(text, area);
+            var backup = path + ".bak";
+            try { System.IO.File.Copy(path, backup, true); } catch { }
+            await System.IO.File.WriteAllTextAsync(path, updated);
+            HGEngineGUI.Services.ChangeLog.Record(path, updated.Length);
+        }
+
+        private static string ReplaceEncounterBlock(string text, HGParsers.EncounterArea area)
+        {
+            var regex = new System.Text.RegularExpressions.Regex(@"encounterdata\s+" + area.Id + @"\s*//[\s\S]*?\.close", System.Text.RegularExpressions.RegexOptions.Multiline);
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"encounterdata   {area.Id}   // {area.Label}");
+            sb.AppendLine();
+            sb.AppendLine($"walkrate {area.WalkRate}");
+            sb.AppendLine($"surfrate {area.SurfRate}");
+            sb.AppendLine($"rocksmashrate {area.RockSmashRate}");
+            sb.AppendLine($"oldrodrate {area.OldRodRate}");
+            sb.AppendLine($"goodrodrate {area.GoodRodRate}");
+            sb.AppendLine($"superrodrate {area.SuperRodRate}");
+            sb.AppendLine($"walklevels {string.Join(", ", area.WalkLevels.Select(v => v.ToString()))}");
+            sb.AppendLine("// walklevels specifies the levels of each slot.  each slot gets its own individual level without a range, which is different compared to the encounter format of later entries.");
+            sb.AppendLine("// replace \"pokemon SPECIES_*\" with \"monwithform SPECIES_*, formid\" to get the specific form of a pokemon.  if i want a galarian darumaka, i'd put \"monwithform SPECIES_DARUMAKA, 1\"");
+            sb.AppendLine("// probabilities:  " + string.Join(", ", area.GrassProbabilities));
+            sb.AppendLine();
+
+            void WriteSpeciesList(string header, IEnumerable<string> list)
+            {
+                sb.AppendLine($"// {header}");
+                foreach (var s in list) sb.AppendLine($"pokemon {s}");
+                sb.AppendLine();
+            }
+            WriteSpeciesList("morning encounter slots", area.MorningGrass);
+            WriteSpeciesList("day encounter slots", area.DayGrass);
+            WriteSpeciesList("night encounter slots", area.NightGrass);
+            WriteSpeciesList("hoenn encounter slots", area.HoennGrass);
+            WriteSpeciesList("sinnoh encounter slots", area.SinnohGrass);
+
+            void WriteEncounters(string header, IEnumerable<HGParsers.EncounterSlot> list, int[] probs)
+            {
+                sb.AppendLine($"// {header}");
+                if (probs.Length > 0) sb.AppendLine($"// probabilities:  {string.Join(", ", probs)}");
+                foreach (var e in list) sb.AppendLine($"encounter {e.SpeciesMacro}, {e.MinLevel}, {e.MaxLevel}");
+                sb.AppendLine();
+            }
+            WriteEncounters("surf encounters", area.Surf, area.SurfProbabilities);
+            WriteEncounters("rock smash encounters", area.RockSmash, area.RockProbabilities);
+            WriteEncounters("old rod encounters", area.OldRod, area.OldRodProbabilities);
+            WriteEncounters("good rod encounters", area.GoodRod, area.GoodRodProbabilities);
+            WriteEncounters("super rod encounters", area.SuperRod, area.SuperRodProbabilities);
+
+            sb.AppendLine("// swarm grass"); sb.AppendLine($"pokemon {area.SwarmGrass}");
+            sb.AppendLine("// swarm surf"); sb.AppendLine($"pokemon {area.SwarmSurf}");
+            sb.AppendLine("// swarm good rod"); sb.AppendLine($"pokemon {area.SwarmGoodRod}");
+            sb.AppendLine("// swarm super rod"); sb.AppendLine($"pokemon {area.SwarmSuperRod}");
+            sb.AppendLine();
+            sb.AppendLine(".close");
+
+            if (regex.IsMatch(text))
+            {
+                return regex.Replace(text, sb.ToString(), 1);
+            }
+            // Fallback: append at end
+            return text.TrimEnd() + "\n\n" + sb.ToString() + "\n";
         }
 
         // Save trainer header for a given trainer id inside armips/data/trainers/trainers.s
