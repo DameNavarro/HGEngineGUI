@@ -13,7 +13,12 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <NavigationView x:Name="RootNavView" IsBackEnabled="False" IsSettingsVisible="False" PaneDisplayMode="Top" SelectionChanged="OnNavigationSelectionChanged">
+    <NavigationView x:Name="RootNavView"
+                    IsBackEnabled="False"
+                    IsBackButtonVisible="Auto"
+                    IsSettingsVisible="False"
+                    PaneDisplayMode="Top"
+                    SelectionChanged="OnNavigationSelectionChanged">
         <NavigationView.MenuItems>
             <NavigationViewItem x:Name="StartItem" Content="Project" Tag="Start" Icon="Folder" IsSelected="True"/>
             <NavigationViewItem x:Name="PokemonItem" Content="Pokémon" Tag="Species" Icon="Contact"/>

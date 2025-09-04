@@ -154,11 +154,9 @@
                         <AppBarButton Icon="Save" Label="Save" Click="OnSaveEvolutions"/>
                         <AppBarButton Icon="Page" Label="Preview" Click="OnPreviewEvolutions"/>
                     </CommandBar>
-                    <StackPanel Grid.Row="1" Spacing="8">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto">
-                            <StackPanel x:Name="EvolutionStack" Loaded="OnEvolutionStackLoaded"/>
-                        </ScrollViewer>
-                    </StackPanel>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Enabled" IsScrollInertiaEnabled="True" ZoomMode="Disabled" HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Enabled">
+                        <StackPanel x:Name="EvolutionStack" Loaded="OnEvolutionStackLoaded" Spacing="8"/>
+                    </ScrollViewer>
                 </Grid>
             </TabViewItem>
             <TabViewItem Header="Egg Moves">

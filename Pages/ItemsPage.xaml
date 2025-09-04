@@ -37,6 +37,84 @@
                     </StackPanel>
                 </Grid>
 
+                <Expander Header="Item Details" IsExpanded="False">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Name"/>
+                        <TextBox x:Name="ItemNameBox"/>
+                        <TextBlock Text="Description"/>
+                        <TextBox x:Name="ItemDescBox" AcceptsReturn="True" TextWrapping="Wrap" Height="120"/>
+
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Spacing="4">
+                                <TextBlock Text="HoldEffect"/>
+                                <ComboBox x:Name="HoldEffectBox" IsEditable="True"/>
+                                <TextBlock Text="HoldEffectParam"/>
+                                <TextBox x:Name="HoldEffectParamBox"/>
+                                <TextBlock Text="PluckEffect"/>
+                                <TextBox x:Name="PluckEffectBox"/>
+                                <TextBlock Text="FlingEffect"/>
+                                <TextBox x:Name="FlingEffectBox"/>
+                                <TextBlock Text="FlingPower"/>
+                                <TextBox x:Name="FlingPowerBox"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Text="NaturalGiftPower"/>
+                                <TextBox x:Name="NatGiftPowerBox"/>
+                                <TextBlock Text="NaturalGiftType (TYPE_*)"/>
+                                <ComboBox x:Name="NatGiftTypeBox" IsEditable="True"/>
+                                <TextBlock Text="PreventToss (TRUE/FALSE)"/>
+                                <ComboBox x:Name="PreventTossBox">
+                                    <ComboBoxItem Content="TRUE"/>
+                                    <ComboBoxItem Content="FALSE"/>
+                                </ComboBox>
+                                <TextBlock Text="Selectable (TRUE/FALSE)"/>
+                                <ComboBox x:Name="SelectableBox">
+                                    <ComboBoxItem Content="TRUE"/>
+                                    <ComboBoxItem Content="FALSE"/>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Spacing="4">
+                                <TextBlock Text="FieldPocket (POCKET_*)"/>
+                                <ComboBox x:Name="FieldPocketBox" IsEditable="True"/>
+                                <TextBlock Text="BattlePocket (BATTLE_POCKET_*)"/>
+                                <ComboBox x:Name="BattlePocketBox" IsEditable="True"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Text="FieldUseFunc"/>
+                                <TextBox x:Name="FieldUseFuncBox"/>
+                                <TextBlock Text="BattleUseFunc"/>
+                                <TextBox x:Name="BattleUseFuncBox"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="4">
+                                <TextBlock Text="PartyUse"/>
+                                <TextBox x:Name="PartyUseBox"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="Party Params (one per line: name=value)"/>
+                        <TextBox x:Name="PartyParamsBox" AcceptsReturn="True" TextWrapping="NoWrap" Height="120"/>
+
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button Content="Preview Item Data" Click="OnPreviewItemData"/>
+                            <Button Content="Save Item Data" Click="OnSaveItemData"/>
+                            <Button Content="Preview Text" Click="OnPreviewItemText"/>
+                            <Button Content="Save Text" Click="OnSaveItemText"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+
                 <Expander x:Name="MartExpander" Header="Mart Items (custom addon)" IsExpanded="False">
                     <StackPanel Spacing="8">
                         <TextBlock x:Name="MartStatus"/>

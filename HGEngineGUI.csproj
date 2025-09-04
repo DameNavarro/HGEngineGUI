@@ -16,6 +16,17 @@
     <DisableMsixProjectCapabilityAddedByProject>true</DisableMsixProjectCapabilityAddedByProject>
   </PropertyGroup>
 
+  <!-- Ensure PlatformTarget matches selected RuntimeIdentifier/Platform to avoid publish conflicts -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)'=='win-x86' or '$(Platform)'=='x86'">
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RuntimeIdentifier)'=='win-x64' or '$(Platform)'=='x64'">
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RuntimeIdentifier)'=='win-arm64' or '$(Platform)'=='ARM64'">
+    <PlatformTarget>ARM64</PlatformTarget>
+  </PropertyGroup>
+
   <ItemGroup>
     <Content Include="Assets\SplashScreen.scale-200.png" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
@@ -62,4 +73,33 @@
     <SelfContained>False</SelfContained>
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
   </PropertyGroup>
+
+  <!-- Place RID outputs in the root TFM folder so packaging finds resources.pri at the expected path -->
+  <PropertyGroup>
+    <UseRidSpecificOutputFolders>false</UseRidSpecificOutputFolders>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+
+  <!-- Workaround for packaging looking for resources.pri in non-RID output path -->
+  <Target Name="CopyResourcesPriToRoot" AfterTargets="Build">
+    <PropertyGroup>
+      <_OutputPri>$(OutputPath)resources.pri</_OutputPri>
+      <_RidPri>$(OutputPath)$(RuntimeIdentifier)\resources.pri</_RidPri>
+      <_AppXPri>$(OutputPath)AppX\resources.pri</_AppXPri>
+      <_RidAppXPri>$(OutputPath)$(RuntimeIdentifier)\AppX\resources.pri</_RidAppXPri>
+      <_PlatformPri>$(OutputPath)win-$(PlatformTarget)\resources.pri</_PlatformPri>
+      <_PlatformAppXPri>$(OutputPath)win-$(PlatformTarget)\AppX\resources.pri</_PlatformAppXPri>
+      <_MsixPublishPri>$(OutputPath)$(RuntimeIdentifier)\msixpublish\resources.pri</_MsixPublishPri>
+      <_PlatformMsixPublishPri>$(OutputPath)win-$(PlatformTarget)\msixpublish\resources.pri</_PlatformMsixPublishPri>
+      <_DoubleRidMsixPublishPri>$(OutputPath)$(RuntimeIdentifier)\$(RuntimeIdentifier)\msixpublish\resources.pri</_DoubleRidMsixPublishPri>
+    </PropertyGroup>
+    <Copy SourceFiles="$(_RidPri)" DestinationFiles="$(_OutputPri)" Condition="Exists('$(_RidPri)') and !Exists('$(_OutputPri)')" />
+    <Copy SourceFiles="$(_AppXPri)" DestinationFiles="$(_OutputPri)" Condition="Exists('$(_AppXPri)') and !Exists('$(_OutputPri)')" />
+    <Copy SourceFiles="$(_RidAppXPri)" DestinationFiles="$(_OutputPri)" Condition="Exists('$(_RidAppXPri)') and !Exists('$(_OutputPri)')" />
+    <Copy SourceFiles="$(_PlatformPri)" DestinationFiles="$(_OutputPri)" Condition="Exists('$(_PlatformPri)') and !Exists('$(_OutputPri)')" />
+    <Copy SourceFiles="$(_PlatformAppXPri)" DestinationFiles="$(_OutputPri)" Condition="Exists('$(_PlatformAppXPri)') and !Exists('$(_OutputPri)')" />
+    <Copy SourceFiles="$(_MsixPublishPri)" DestinationFiles="$(_OutputPri)" Condition="Exists('$(_MsixPublishPri)') and !Exists('$(_OutputPri)')" />
+    <Copy SourceFiles="$(_PlatformMsixPublishPri)" DestinationFiles="$(_OutputPri)" Condition="Exists('$(_PlatformMsixPublishPri)') and !Exists('$(_OutputPri)')" />
+    <Copy SourceFiles="$(_DoubleRidMsixPublishPri)" DestinationFiles="$(_OutputPri)" Condition="Exists('$(_DoubleRidMsixPublishPri)') and !Exists('$(_OutputPri)')" />
+  </Target>
 </Project>

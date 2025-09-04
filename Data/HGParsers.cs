@@ -16,14 +16,30 @@ namespace HGEngineGUI.Data
         private static List<SpeciesEntry> _species = new();
         public static IReadOnlyList<string> SpeciesMacroNames => _speciesMacroNames;
         private static List<string> _speciesMacroNames = new();
+        private static Dictionary<string,int> _speciesValues = new(StringComparer.Ordinal);
+        private static Dictionary<int,string> _speciesIdToMacro = new();
+        public static bool TryGetSpeciesValue(string macro, out int value) => _speciesValues.TryGetValue(macro, out value);
+        public static bool TryGetSpeciesMacro(int value, out string macro) => _speciesIdToMacro.TryGetValue(value, out macro!);
         public static IReadOnlyList<(int Id, string Name)> TrainerClasses => _trainerClasses;
         private static List<(int Id, string Name)> _trainerClasses = new();
         public static IReadOnlyList<string> ItemMacros => _itemMacros;
         private static List<string> _itemMacros = new();
+        private static Dictionary<int,string> _itemIdToMacro = new();
         public static IReadOnlyList<string> TypeMacros => _typeMacros;
         private static List<string> _typeMacros = new();
+        private static Dictionary<string,int> _typeValues = new(StringComparer.Ordinal);
+        private static Dictionary<int,string> _typeIdToMacro = new();
+        public static bool TryGetTypeValue(string macro, out int value) => _typeValues.TryGetValue(macro, out value);
+        public static bool TryGetTypeMacro(int value, out string macro) => _typeIdToMacro.TryGetValue(value, out macro!);
         public static IReadOnlyList<string> AbilityMacros => _abilityMacros;
         private static List<string> _abilityMacros = new();
+        // Item-related macro lists for dropdowns
+        public static IReadOnlyList<string> HoldEffectMacros => _holdEffectMacros;
+        private static List<string> _holdEffectMacros = new();
+        public static IReadOnlyList<string> PocketMacros => _pocketMacros;
+        private static List<string> _pocketMacros = new();
+        public static IReadOnlyList<string> BattlePocketMacros => _battlePocketMacros;
+        private static List<string> _battlePocketMacros = new();
         public static IReadOnlyList<string> EggGroupMacros => _eggGroupMacros;
         private static List<string> _eggGroupMacros = new();
         public static IReadOnlyList<string> GrowthRateMacros => _growthRateMacros;
@@ -33,7 +49,9 @@ namespace HGEngineGUI.Data
         public static IReadOnlyList<string> MapMacros => _mapMacros;
         private static List<string> _mapMacros = new();
         private static Dictionary<string,int> _mapValues = new(StringComparer.Ordinal);
+        private static Dictionary<int,string> _mapIdToMacro = new();
         public static bool TryGetMapValue(string macro, out int value) => _mapValues.TryGetValue(macro, out value);
+        public static bool TryGetMapMacro(int value, out string macro) => _mapIdToMacro.TryGetValue(value, out macro!);
 
         // Trainer AI flag macros (F_*) parsed from armips/include/constants.s
         public static IReadOnlyList<string> AIFlagMacros => _aiFlagMacros;
@@ -49,10 +67,10 @@ namespace HGEngineGUI.Data
 
         // Detail caches populated on demand for a selected species
         public static IReadOnlyList<(int level, string move)> LevelUpMoves => _levelUpMoves;
-        public static IReadOnlyList<(string method, int param, string target)> Evolutions => _evolutions;
+        public static IReadOnlyList<(string method, int param, string target, int form)> Evolutions => _evolutions;
         public static IReadOnlyList<string> EggMoves => _eggMoves;
         private static List<(int level, string move)> _levelUpMoves = new();
-        private static List<(string method, int param, string target)> _evolutions = new();
+        private static List<(string method, int param, string target, int form)> _evolutions = new();
         private static List<string> _eggMoves = new();
 
         // Overview data
@@ -332,11 +350,41 @@ namespace HGEngineGUI.Data
         private static List<string> _moveMacros = new();
         private static Dictionary<string,int> _itemValues = new(StringComparer.Ordinal);
         private static Dictionary<string,int> _moveValues = new(StringComparer.Ordinal);
+        private static Dictionary<int,string> _moveIdToMacro = new();
         public static bool TryGetItemValue(string macro, out int value) => _itemValues.TryGetValue(macro, out value);
         public static bool TryGetMoveValue(string macro, out int value) => _moveValues.TryGetValue(macro, out value);
+        public static bool TryGetItemMacro(int value, out string macro) => _itemIdToMacro.TryGetValue(value, out macro!);
+        public static bool TryGetMoveMacro(int value, out string macro) => _moveIdToMacro.TryGetValue(value, out macro!);
         // Items and prices
         public static IReadOnlyList<(string ItemMacro, int Price)> ItemsWithPrices => _itemsWithPrices;
         private static List<(string ItemMacro, int Price)> _itemsWithPrices = new();
+        // Full item data parsed from data/itemdata/itemdata.c and item text
+        public class ItemDataEntry
+        {
+            public string ItemMacro { get; set; } = string.Empty;
+            public int ItemId { get; set; }
+            public string Name { get; set; } = string.Empty;
+            public string Description { get; set; } = string.Empty;
+            public string Price { get; set; } = "0";
+            public string HoldEffect { get; set; } = "0";
+            public string HoldEffectParam { get; set; } = "0";
+            public string PluckEffect { get; set; } = "0";
+            public string FlingEffect { get; set; } = "0";
+            public string FlingPower { get; set; } = "0";
+            public string NaturalGiftPower { get; set; } = "0";
+            public string NaturalGiftType { get; set; } = string.Empty;
+            public string PreventToss { get; set; } = "FALSE";
+            public string Selectable { get; set; } = "FALSE";
+            public string FieldPocket { get; set; } = string.Empty;
+            public string BattlePocket { get; set; } = string.Empty;
+            public string FieldUseFunc { get; set; } = "0";
+            public string BattleUseFunc { get; set; } = "0";
+            public string PartyUse { get; set; } = "0";
+            public Dictionary<string,string> PartyFlags { get; set; } = new();
+            public Dictionary<string,string> PartyParams { get; set; } = new();
+        }
+        public static IReadOnlyList<ItemDataEntry> ItemsData => _itemsData;
+        private static List<ItemDataEntry> _itemsData = new();
         public static string? PathItemData { get; private set; }
         public static string? PathMartItems { get; private set; }
         public static bool HasMartItems => PathMartItems != null && System.IO.File.Exists(PathMartItems);
@@ -394,6 +442,8 @@ namespace HGEngineGUI.Data
 
         public static string? PathEncounters { get; private set; }
         public static string? PathHeadbutt { get; private set; }
+        public static string? PathItemNames { get; private set; }
+        public static string? PathItemDescriptions { get; private set; }
         // Mart editor
         public class MartItemEntry
         {
@@ -581,6 +631,8 @@ namespace HGEngineGUI.Data
                     if (!name.StartsWith("SPECIES_", StringComparison.Ordinal)) continue;
                     if (!int.TryParse(m.Groups["value"].Value, out var id)) continue;
                     _species.Add(new SpeciesEntry(id, name));
+                    _speciesValues[name] = id;
+                    _speciesIdToMacro[id] = name;
                 }
                 _species.Sort((a, b) => a.Id.CompareTo(b.Id));
                 ProjectContext.SpeciesCount = _species.Count;
@@ -611,6 +663,9 @@ namespace HGEngineGUI.Data
             if (File.Exists(itemHeader))
             {
                 _itemValues = new(StringComparer.Ordinal);
+                _itemIdToMacro = new();
+                _pocketMacros = new();
+                _battlePocketMacros = new();
                 foreach (var line in await File.ReadAllLinesAsync(itemHeader))
                 {
                     var m = DefineRegex.Match(line);
@@ -619,8 +674,31 @@ namespace HGEngineGUI.Data
                     if (name.StartsWith("ITEM_", StringComparison.Ordinal))
                     {
                         _itemMacros.Add(name);
-                        if (int.TryParse(m.Groups["value"].Value, out var iv)) _itemValues[name] = iv;
+                        if (int.TryParse(m.Groups["value"].Value, out var iv)) { _itemValues[name] = iv; _itemIdToMacro[iv] = name; }
                     }
+                    else if (name.StartsWith("POCKET_", StringComparison.Ordinal))
+                    {
+                        if (!_pocketMacros.Contains(name)) _pocketMacros.Add(name);
+                    }
+                    else if (name.StartsWith("BATTLE_POCKET_", StringComparison.Ordinal))
+                    {
+                        if (!_battlePocketMacros.Contains(name)) _battlePocketMacros.Add(name);
+                    }
+                }
+            }
+
+            // Hold effect macros (HOLD_EFFECT_*)
+            _holdEffectMacros = new();
+            var holdEffectHeader = Path.Combine(ProjectContext.RootPath, "include", "constants", "hold_item_effects.h");
+            if (File.Exists(holdEffectHeader))
+            {
+                foreach (var line in await File.ReadAllLinesAsync(holdEffectHeader))
+                {
+                    var m = DefineRegex.Match(line);
+                    if (!m.Success) continue;
+                    var name = m.Groups["name"].Value;
+                    if (name.StartsWith("HOLD_EFFECT_", StringComparison.Ordinal) && !_holdEffectMacros.Contains(name))
+                        _holdEffectMacros.Add(name);
                 }
             }
 
@@ -629,12 +707,15 @@ namespace HGEngineGUI.Data
             var typeHeader = Path.Combine(ProjectContext.RootPath, "include", "battle.h");
             if (File.Exists(typeHeader))
             {
+                _typeValues = new(StringComparer.Ordinal);
+                _typeIdToMacro = new();
                 foreach (var line in await File.ReadAllLinesAsync(typeHeader))
                 {
-                    var m = Regex.Match(line, @"^\s*#define\s+(TYPE_[A-Z0-9_]+)\s+\d+");
+                    var m = Regex.Match(line, @"^\s*#define\s+(TYPE_[A-Z0-9_]+)\s+(?<v>\d+)");
                     if (!m.Success) continue;
                     var name = m.Groups[1].Value;
                     if (!_typeMacros.Contains(name)) _typeMacros.Add(name);
+                    if (int.TryParse(m.Groups["v"].Value, out var tv)) { _typeValues[name] = tv; _typeIdToMacro[tv] = name; }
                 }
             }
 
@@ -729,9 +810,25 @@ namespace HGEngineGUI.Data
                     var m = DefineRegex.Match(line);
                     if (!m.Success) continue;
                     var name = m.Groups["name"].Value;
-                    if (name.StartsWith("EVO_", StringComparison.Ordinal)) _evoMethodMacros.Add(name);
+                    if (name.StartsWith("EVO_", StringComparison.Ordinal) && !_evoMethodMacros.Contains(name)) _evoMethodMacros.Add(name);
                 }
             }
+            // Also parse armips/include/constants.s where EVO_* are defined as .equ
+            try
+            {
+                var constantsAsmForEvo = Path.Combine(ProjectContext.RootPath, "armips", "include", "constants.s");
+                if (File.Exists(constantsAsmForEvo))
+                {
+                    foreach (var line in await File.ReadAllLinesAsync(constantsAsmForEvo))
+                    {
+                        var m = Regex.Match(line, "^\\s*\\.equ\\s+(EVO_[A-Z0-9_]+)\\s*,");
+                        if (!m.Success) continue;
+                        var name = m.Groups[1].Value;
+                        if (!_evoMethodMacros.Contains(name)) _evoMethodMacros.Add(name);
+                    }
+                }
+            }
+            catch { }
 
             // Map macros for EVO_MAP (best-effort)
             _mapMacros = new();
@@ -740,6 +837,7 @@ namespace HGEngineGUI.Data
             if (!File.Exists(mapHeader)) mapHeader = Path.Combine(ProjectContext.RootPath, "include", "constants", "map_groups.h");
             if (File.Exists(mapHeader))
             {
+                _mapIdToMacro = new();
                 foreach (var line in await File.ReadAllLinesAsync(mapHeader))
                 {
                     var m = DefineRegex.Match(line);
@@ -748,7 +846,7 @@ namespace HGEngineGUI.Data
                     if (name.StartsWith("MAP_", StringComparison.Ordinal))
                     {
                         _mapMacros.Add(name);
-                        if (int.TryParse(m.Groups["value"].Value, out var mv)) _mapValues[name] = mv;
+                        if (int.TryParse(m.Groups["value"].Value, out var mv)) { _mapValues[name] = mv; _mapIdToMacro[mv] = name; }
                     }
                 }
             }
@@ -782,6 +880,7 @@ namespace HGEngineGUI.Data
             if (File.Exists(movesHeader))
             {
                 _moveValues = new(StringComparer.Ordinal);
+                _moveIdToMacro = new();
                 foreach (var line in await File.ReadAllLinesAsync(movesHeader))
                 {
                     var m = DefineRegex.Match(line);
@@ -790,7 +889,7 @@ namespace HGEngineGUI.Data
                     if (name.StartsWith("MOVE_", StringComparison.Ordinal))
                     {
                         _moveMacros.Add(name);
-                        if (int.TryParse(m.Groups["value"].Value, out var mv)) _moveValues[name] = mv;
+                        if (int.TryParse(m.Groups["value"].Value, out var mv)) { _moveValues[name] = mv; _moveIdToMacro[mv] = name; }
                     }
                 }
             }
@@ -848,30 +947,108 @@ namespace HGEngineGUI.Data
                 }
             }
 
-            // Items with prices from data/itemdata/itemdata.c (.price fields by index)
+            // Items with prices and full item data from data/itemdata/itemdata.c
             _itemsWithPrices = new();
+            _itemsData = new();
             if (PathItemData != null && File.Exists(PathItemData))
             {
                 try
                 {
                     var text = await File.ReadAllTextAsync(PathItemData);
                     text = text.Replace("\r\n", "\n");
-                    // Find entries of the form: [ITEM_*] = { ... .price = N,
-                    var entryRx = new Regex(@"\[(?<item>ITEM_[A-Z0-9_]+)\]\s*=\s*\{(?<body>[\s\S]*?)\}", RegexOptions.Multiline);
+                    // Match entries of the form: [ITEM_*] = { ... } or with index adjustments
+                    var entryRx = new Regex(@"\[\s*(?<item>ITEM_[A-Z0-9_]+)(?:\s*-\s*NUM_UNKNOWN_SLOTS(?:_EXPLORER_KIT)?)?\s*\]\s*=\s*\{(?<body>[\s\S]*?)\}\s*,?", RegexOptions.Multiline);
                     foreach (Match em in entryRx.Matches(text))
                     {
-                        string item = em.Groups["item"].Value;
+                        string itemMacro = em.Groups["item"].Value;
                         var body = em.Groups["body"].Value;
-                        var pm = Regex.Match(body, @"\.price\s*=\s*(?<p>\d+)");
-                        int price = pm.Success ? int.Parse(pm.Groups["p"].Value) : 0;
-                        _itemsWithPrices.Add((item, price));
+                        var entry = new ItemDataEntry { ItemMacro = itemMacro };
+                        if (_itemValues.TryGetValue(itemMacro, out var idVal)) entry.ItemId = idVal;
+
+                        // Extract partyUseParam block
+                        var partyMatch = Regex.Match(body, @"\.partyUseParam\s*=\s*\{(?<p>[\s\S]*?)\}", RegexOptions.Multiline);
+                        string partyBody = string.Empty;
+                        if (partyMatch.Success)
+                        {
+                            partyBody = partyMatch.Groups["p"].Value;
+                            body = body.Remove(partyMatch.Index, partyMatch.Length);
+                        }
+
+                        var assignRx = new Regex(@"\.(?<name>[A-Za-z0-9_]+)\s*=\s*(?<value>[^,\}\n]+)", RegexOptions.Multiline);
+                        foreach (Match m in assignRx.Matches(body))
+                        {
+                            string name = m.Groups["name"].Value;
+                            string value = m.Groups["value"].Value.Trim();
+                            switch (name)
+                            {
+                                case "price": entry.Price = value; break;
+                                case "holdEffect": entry.HoldEffect = value; break;
+                                case "holdEffectParam": entry.HoldEffectParam = value; break;
+                                case "pluckEffect": entry.PluckEffect = value; break;
+                                case "flingEffect": entry.FlingEffect = value; break;
+                                case "flingPower": entry.FlingPower = value; break;
+                                case "naturalGiftPower": entry.NaturalGiftPower = value; break;
+                                case "naturalGiftType": entry.NaturalGiftType = value; break;
+                                case "prevent_toss": entry.PreventToss = value; break;
+                                case "selectable": entry.Selectable = value; break;
+                                case "fieldPocket": entry.FieldPocket = value; break;
+                                case "battlePocket": entry.BattlePocket = value; break;
+                                case "fieldUseFunc": entry.FieldUseFunc = value; break;
+                                case "battleUseFunc": entry.BattleUseFunc = value; break;
+                                case "partyUse": entry.PartyUse = value; break;
+                                default: break;
+                            }
+                        }
+                        if (!string.IsNullOrEmpty(partyBody))
+                        {
+                            foreach (Match m in assignRx.Matches(partyBody))
+                            {
+                                string n = m.Groups["name"].Value;
+                                string v = m.Groups["value"].Value.Trim();
+                                if (n.EndsWith("_param", StringComparison.Ordinal)) entry.PartyParams[n] = v; else entry.PartyFlags[n] = v;
+                            }
+                        }
+
+                        if (int.TryParse(entry.Price, out var pInt)) _itemsWithPrices.Add((itemMacro, pInt)); else _itemsWithPrices.Add((itemMacro, 0));
+                        _itemsData.Add(entry);
                     }
-                    // fallback: sort by enum value using _itemValues if available
                     if (_itemValues.Count > 0)
+                    {
                         _itemsWithPrices = _itemsWithPrices.OrderBy(t => _itemValues.TryGetValue(t.ItemMacro, out var v) ? v : int.MaxValue).ToList();
+                        _itemsData = _itemsData.OrderBy(e => e.ItemId).ToList();
+                    }
                 }
                 catch { }
             }
+
+            // Load item names and descriptions from text banks if present
+            try
+            {
+                var namesLines = new List<string>();
+                var descLines = new List<string>();
+                if (PathItemNames != null && File.Exists(PathItemNames)) namesLines = (await File.ReadAllLinesAsync(PathItemNames)).ToList();
+                if (PathItemDescriptions != null && File.Exists(PathItemDescriptions)) descLines = (await File.ReadAllLinesAsync(PathItemDescriptions)).ToList();
+                if (namesLines.Count > 0 || descLines.Count > 0)
+                {
+                    if (_itemsData.Count == 0 && _itemValues.Count > 0)
+                    {
+                        foreach (var kv in _itemValues.OrderBy(k => k.Value))
+                        {
+                            _itemsData.Add(new ItemDataEntry { ItemMacro = kv.Key, ItemId = kv.Value });
+                        }
+                    }
+                    foreach (var e in _itemsData)
+                    {
+                        int idx = e.ItemId;
+                        if (idx >= 0)
+                        {
+                            if (idx < namesLines.Count) e.Name = namesLines[idx];
+                            if (idx < descLines.Count) e.Description = descLines[idx];
+                        }
+                    }
+                }
+            }
+            catch { }
 
             // Parse mart_items.s sections (if present)
             _martSections = new();
@@ -1042,14 +1219,17 @@ namespace HGEngineGUI.Data
                     if (endIdx > idx)
                     {
                         var block = text.Substring(idx, endIdx - idx);
-                        var evoRegex = new Regex(@"evolution\s+(?<method>[A-Z0-9_]+),\s*(?<param>\d+),\s*(?<target>[A-Z0-9_]+)");
+                        // Parse optional form bits OR'd into target: target | (form << 11)
+                        var evoRegex = new Regex(@"evolution\s+(?<method>[A-Z0-9_]+)\s*,\s*(?<param>\d+)\s*,\s*(?<target>[A-Z0-9_]+)(?:\s*\|\s*\(\s*(?<form>\d+)\s*<<\s*11\s*\))?", RegexOptions.Multiline);
                         foreach (Match m in evoRegex.Matches(block))
                         {
                             var method = m.Groups["method"].Value;
                             var param = int.Parse(m.Groups["param"].Value);
                             var target = m.Groups["target"].Value;
+                            int form = 0;
+                            if (m.Groups["form"].Success) int.TryParse(m.Groups["form"].Value, out form);
                             if (method != "EVO_NONE")
-                                _evolutions.Add((method, param, target));
+                                _evolutions.Add((method, param, target, form));
                         }
                     }
                 }
@@ -1162,13 +1342,13 @@ namespace HGEngineGUI.Data
                     catch { }
                     var runChance = Regex.Match(block, @"runchance\s+(?<v>\d+)");
                     if (runChance.Success) ov.RunChance = int.Parse(runChance.Groups["v"].Value);
-                    var dexClass = Regex.Match(block, @"mondexclassification\s+[^,]+,\s*""(?<v>[\s\S]*?)""\s*$", RegexOptions.Multiline);
+                    var dexClass = Regex.Match(block, @"mondexclassification\s+[^,]+,\s*""{1,2}(?<v>[\s\S]*?)""{1,2}\s*$", RegexOptions.Multiline);
                     if (dexClass.Success) ov.DexClassification = dexClass.Groups["v"].Value;
-                    var dexEntry = Regex.Match(block, @"mondexentry\s+[^,]+,\s*""(?<v>[\s\S]*?)""\s*$", RegexOptions.Multiline);
+                    var dexEntry = Regex.Match(block, @"mondexentry\s+[^,]+,\s*""{1,2}(?<v>[\s\S]*?)""{1,2}\s*$", RegexOptions.Multiline);
                     if (dexEntry.Success) ov.DexEntry = dexEntry.Groups["v"].Value;
-                    var dexHeight = Regex.Match(block, @"mondexheight\s+[^,]+,\s*""(?<v>[\s\S]*?)""\s*$", RegexOptions.Multiline);
+                    var dexHeight = Regex.Match(block, @"mondexheight\s+[^,]+,\s*""{1,2}(?<v>[\s\S]*?)""{1,2}\s*$", RegexOptions.Multiline);
                     if (dexHeight.Success) ov.DexHeight = dexHeight.Groups["v"].Value;
-                    var dexWeight = Regex.Match(block, @"mondexweight\s+[^,]+,\s*""(?<v>[\s\S]*?)""\s*$", RegexOptions.Multiline);
+                    var dexWeight = Regex.Match(block, @"mondexweight\s+[^,]+,\s*""{1,2}(?<v>[\s\S]*?)""{1,2}\s*$", RegexOptions.Multiline);
                     if (dexWeight.Success) ov.DexWeight = dexWeight.Groups["v"].Value;
 
                     Overview = ov;
@@ -1183,16 +1363,13 @@ namespace HGEngineGUI.Data
                     var baseExpPath = Path.Combine(ProjectContext.RootPath, "data", "BaseExperienceTable.c");
                     if (File.Exists(baseExpPath))
                     {
-                        var lines = await File.ReadAllLinesAsync(baseExpPath);
-                        var pattern = new Regex(@"\[" + Regex.Escape(speciesMacro) + @"\]\s*=\s*(?<v>\d+)");
-                        foreach (var line in lines)
+                        // Use a single multiline search to avoid missing due to per-line quirks
+                        var content = await File.ReadAllTextAsync(baseExpPath);
+                        var pattern = new Regex(@"\[\s*" + Regex.Escape(speciesMacro) + @"\s*\]\s*=\s*(?<v>\d+)\s*,", RegexOptions.Multiline);
+                        var m = pattern.Match(content);
+                        if (m.Success)
                         {
-                            var m = pattern.Match(line);
-                            if (m.Success)
-                            {
-                                Overview.BaseExp = int.Parse(m.Groups["v"].Value);
-                                break;
-                            }
+                            Overview.BaseExp = int.Parse(m.Groups["v"].Value);
                         }
                     }
                 }
@@ -1309,6 +1486,11 @@ namespace HGEngineGUI.Data
                 ?? FindFile("itemdata.c");
             PathMartItems = PreferExisting(Path.Combine(ProjectContext.RootPath, "armips", "asm", "custom", "mart_items.s"))
                 ?? FindFile("mart_items.s");
+            // Item names/descriptions text banks (222.txt names, 221.txt descriptions)
+            PathItemNames = PreferExisting(Path.Combine(ProjectContext.RootPath, "data", "text", "222.txt"))
+                ?? FindFile("222.txt");
+            PathItemDescriptions = PreferExisting(Path.Combine(ProjectContext.RootPath, "data", "text", "221.txt"))
+                ?? FindFile("221.txt");
         }
 
         private static string? PreferExisting(string path)

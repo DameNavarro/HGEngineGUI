@@ -13,6 +13,8 @@ namespace HGEngineGUI.Pages
     {
         private List<(string ItemMacro, int Price)> _items = new();
         private (string ItemMacro, int Price)? _selected;
+        private List<HGEngineGUI.Data.HGParsers.ItemDataEntry> _itemsData = new();
+        private HGEngineGUI.Data.HGParsers.ItemDataEntry? _selectedData;
         private List<HGEngineGUI.Data.HGParsers.MartSection> _marts = new();
         private HGEngineGUI.Data.HGParsers.MartSection? _selectedMart;
 
@@ -27,6 +29,13 @@ namespace HGEngineGUI.Pages
             await HGEngineGUI.Data.HGParsers.RefreshCachesAsync();
             _items = HGEngineGUI.Data.HGParsers.ItemsWithPrices.ToList();
             ItemList.ItemsSource = _items.Select(t => t.ItemMacro).ToList();
+            _itemsData = HGEngineGUI.Data.HGParsers.ItemsData.ToList();
+
+            // Populate dropdown sources
+            HoldEffectBox.ItemsSource = HGEngineGUI.Data.HGParsers.HoldEffectMacros;
+            NatGiftTypeBox.ItemsSource = HGEngineGUI.Data.HGParsers.TypeMacros;
+            FieldPocketBox.ItemsSource = HGEngineGUI.Data.HGParsers.PocketMacros;
+            BattlePocketBox.ItemsSource = HGEngineGUI.Data.HGParsers.BattlePocketMacros;
 
             if (HGEngineGUI.Data.HGParsers.HasMartItems)
             {
@@ -55,6 +64,27 @@ namespace HGEngineGUI.Pages
             _selected = _items.FirstOrDefault(t => t.ItemMacro == macro);
             SelectedItemText.Text = macro;
             PriceBox.Text = _selected?.Price.ToString() ?? "";
+            _selectedData = _itemsData.FirstOrDefault(d => d.ItemMacro == macro);
+            if (_selectedData != null)
+            {
+                ItemNameBox.Text = _selectedData.Name ?? string.Empty;
+                ItemDescBox.Text = _selectedData.Description ?? string.Empty;
+                HoldEffectBox.Text = _selectedData.HoldEffect;
+                HoldEffectParamBox.Text = _selectedData.HoldEffectParam;
+                PluckEffectBox.Text = _selectedData.PluckEffect;
+                FlingEffectBox.Text = _selectedData.FlingEffect;
+                FlingPowerBox.Text = _selectedData.FlingPower;
+                NatGiftPowerBox.Text = _selectedData.NaturalGiftPower;
+                NatGiftTypeBox.Text = _selectedData.NaturalGiftType;
+                PreventTossBox.SelectedIndex = string.Equals(_selectedData.PreventToss, "TRUE", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+                SelectableBox.SelectedIndex = string.Equals(_selectedData.Selectable, "TRUE", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
+                FieldPocketBox.Text = _selectedData.FieldPocket;
+                BattlePocketBox.Text = _selectedData.BattlePocket;
+                FieldUseFuncBox.Text = _selectedData.FieldUseFunc;
+                BattleUseFuncBox.Text = _selectedData.BattleUseFunc;
+                PartyUseBox.Text = _selectedData.PartyUse;
+                PartyParamsBox.Text = string.Join("\n", _selectedData.PartyFlags.Select(kv => $"{kv.Key}={kv.Value}").Concat(_selectedData.PartyParams.Select(kv => $"{kv.Key}={kv.Value}")));
+            }
         }
 
         private async void OnPreviewPrices(object sender, RoutedEventArgs e)
@@ -72,6 +102,80 @@ namespace HGEngineGUI.Pages
             if (!int.TryParse(PriceBox.Text.Trim(), out var p)) return;
             var entries = new List<(string ItemMacro, int Price)> { (_selected.Value.ItemMacro, p) };
             await HGEngineGUI.Data.HGSerializers.SaveItemPricesAsync(entries);
+            await InitializeAsync();
+        }
+
+        private HGEngineGUI.Data.HGParsers.ItemDataEntry? CaptureItemDataFromUI()
+        {
+            if (_selectedData == null) return null;
+            var d = new HGEngineGUI.Data.HGParsers.ItemDataEntry
+            {
+                ItemMacro = _selectedData.ItemMacro,
+                ItemId = _selectedData.ItemId,
+                Price = PriceBox.Text?.Trim() ?? _selectedData.Price,
+                Name = ItemNameBox.Text ?? string.Empty,
+                Description = ItemDescBox.Text ?? string.Empty,
+                HoldEffect = (HoldEffectBox.Text ?? string.Empty).Trim(),
+                HoldEffectParam = HoldEffectParamBox.Text?.Trim() ?? _selectedData.HoldEffectParam,
+                PluckEffect = PluckEffectBox.Text?.Trim() ?? _selectedData.PluckEffect,
+                FlingEffect = FlingEffectBox.Text?.Trim() ?? _selectedData.FlingEffect,
+                FlingPower = FlingPowerBox.Text?.Trim() ?? _selectedData.FlingPower,
+                NaturalGiftPower = NatGiftPowerBox.Text?.Trim() ?? _selectedData.NaturalGiftPower,
+                NaturalGiftType = (NatGiftTypeBox.Text ?? string.Empty).Trim(),
+                PreventToss = (PreventTossBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? _selectedData.PreventToss,
+                Selectable = (SelectableBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? _selectedData.Selectable,
+                FieldPocket = (FieldPocketBox.Text ?? string.Empty).Trim(),
+                BattlePocket = (BattlePocketBox.Text ?? string.Empty).Trim(),
+                FieldUseFunc = FieldUseFuncBox.Text?.Trim() ?? _selectedData.FieldUseFunc,
+                BattleUseFunc = BattleUseFuncBox.Text?.Trim() ?? _selectedData.BattleUseFunc,
+                PartyUse = PartyUseBox.Text?.Trim() ?? _selectedData.PartyUse,
+                PartyFlags = new Dictionary<string, string>(_selectedData.PartyFlags),
+                PartyParams = new Dictionary<string, string>(_selectedData.PartyParams)
+            };
+            // parse party params lines
+            d.PartyFlags.Clear(); d.PartyParams.Clear();
+            var lines = (PartyParamsBox.Text ?? string.Empty).Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var ln in lines)
+            {
+                var idx = ln.IndexOf('=');
+                if (idx <= 0) continue;
+                var key = ln.Substring(0, idx).Trim();
+                var val = ln.Substring(idx + 1).Trim();
+                if (string.IsNullOrEmpty(key)) continue;
+                if (key.EndsWith("_param", StringComparison.Ordinal)) d.PartyParams[key] = val; else d.PartyFlags[key] = val;
+            }
+            return d;
+        }
+
+        private async void OnPreviewItemData(object sender, RoutedEventArgs e)
+        {
+            var d = CaptureItemDataFromUI();
+            if (d == null) return;
+            var diff = await HGEngineGUI.Data.HGSerializers.PreviewItemDataAsync(new List<HGEngineGUI.Data.HGParsers.ItemDataEntry> { d });
+            await ShowDiffAsync(diff);
+        }
+
+        private async void OnSaveItemData(object sender, RoutedEventArgs e)
+        {
+            var d = CaptureItemDataFromUI();
+            if (d == null) return;
+            await HGEngineGUI.Data.HGSerializers.SaveItemDataAsync(new List<HGEngineGUI.Data.HGParsers.ItemDataEntry> { d });
+            await InitializeAsync();
+        }
+
+        private async void OnPreviewItemText(object sender, RoutedEventArgs e)
+        {
+            if (_selectedData == null) return;
+            var change = (ItemId: _selectedData.ItemId, Name: ItemNameBox.Text, Description: ItemDescBox.Text);
+            var diff = await HGEngineGUI.Data.HGSerializers.PreviewItemTextAsync(new List<(int, string?, string?)> { change });
+            await ShowDiffAsync(diff);
+        }
+
+        private async void OnSaveItemText(object sender, RoutedEventArgs e)
+        {
+            if (_selectedData == null) return;
+            var change = (ItemId: _selectedData.ItemId, Name: ItemNameBox.Text, Description: ItemDescBox.Text);
+            await HGEngineGUI.Data.HGSerializers.SaveItemTextAsync(new List<(int, string?, string?)> { change });
             await InitializeAsync();
         }
 

@@ -68,6 +68,200 @@ namespace HGEngineGUI.Data
             HGEngineGUI.Services.ChangeLog.Record(path, text.Length);
         }
 
+        // Preview/save updates to multiple item fields inside data/itemdata/itemdata.c
+        public static async Task<string> PreviewItemDataAsync(List<HGParsers.ItemDataEntry> entries)
+        {
+            if (ProjectContext.RootPath == null || entries == null || entries.Count == 0) return string.Empty;
+            var path = HGParsers.PathItemData ?? System.IO.Path.Combine(ProjectContext.RootPath, "data", "itemdata", "itemdata.c");
+            if (!System.IO.File.Exists(path)) return string.Empty;
+            var original = await System.IO.File.ReadAllTextAsync(path);
+            var updated = await ReplaceItemDataAsync(original, entries);
+            return ComputeUnifiedDiff(original, updated, "itemdata.c");
+        }
+
+        public static async Task SaveItemDataAsync(List<HGParsers.ItemDataEntry> entries)
+        {
+            if (ProjectContext.RootPath == null || entries == null || entries.Count == 0) return;
+            var path = HGParsers.PathItemData ?? System.IO.Path.Combine(ProjectContext.RootPath, "data", "itemdata", "itemdata.c");
+            if (!System.IO.File.Exists(path)) return;
+            var text = await System.IO.File.ReadAllTextAsync(path);
+            var updated = await ReplaceItemDataAsync(text, entries);
+            var backup = path + ".bak";
+            try { System.IO.File.Copy(path, backup, true); } catch { }
+            await System.IO.File.WriteAllTextAsync(path, updated);
+            HGEngineGUI.Services.ChangeLog.Record(path, updated.Length);
+        }
+
+        private static Task<string> ReplaceItemDataAsync(string text, List<HGParsers.ItemDataEntry> entries)
+        {
+            // Normalize newlines for consistency
+            bool hadCrLf = text.Contains("\r\n");
+            string normalized = hadCrLf ? text.Replace("\r\n", "\n") : text;
+
+            foreach (var e in entries)
+            {
+                if (string.IsNullOrWhiteSpace(e.ItemMacro)) continue;
+                // Match one item block by macro, tolerant of index arithmetic (e.g., - NUM_UNKNOWN_SLOTS)
+                var blockRx = new System.Text.RegularExpressions.Regex("\\[\\s*" + System.Text.RegularExpressions.Regex.Escape(e.ItemMacro) + @"(?:\\s*-\\s*NUM_UNKNOWN_SLOTS(?:_EXPLORER_KIT)?)?\\s*\\]\\s*=\\s*\\{(?<body>[\\s\\S]*?)\\}", System.Text.RegularExpressions.RegexOptions.Multiline);
+                var m = blockRx.Match(normalized);
+                if (!m.Success) continue;
+                int start = m.Index;
+                int length = m.Length;
+                string fullBlock = normalized.Substring(start, length);
+                string body = m.Groups["body"].Value;
+
+                // Update top-level assignments
+                string newBody = ReplaceAssignment(body, "price", e.Price);
+                newBody = ReplaceAssignment(newBody, "holdEffect", e.HoldEffect);
+                newBody = ReplaceAssignment(newBody, "holdEffectParam", e.HoldEffectParam);
+                newBody = ReplaceAssignment(newBody, "pluckEffect", e.PluckEffect);
+                newBody = ReplaceAssignment(newBody, "flingEffect", e.FlingEffect);
+                newBody = ReplaceAssignment(newBody, "flingPower", e.FlingPower);
+                newBody = ReplaceAssignment(newBody, "naturalGiftPower", e.NaturalGiftPower);
+                if (!string.IsNullOrWhiteSpace(e.NaturalGiftType)) newBody = ReplaceAssignment(newBody, "naturalGiftType", e.NaturalGiftType);
+                newBody = ReplaceAssignment(newBody, "prevent_toss", e.PreventToss);
+                newBody = ReplaceAssignment(newBody, "selectable", e.Selectable);
+                if (!string.IsNullOrWhiteSpace(e.FieldPocket)) newBody = ReplaceAssignment(newBody, "fieldPocket", e.FieldPocket);
+                if (!string.IsNullOrWhiteSpace(e.BattlePocket)) newBody = ReplaceAssignment(newBody, "battlePocket", e.BattlePocket);
+                newBody = ReplaceAssignment(newBody, "fieldUseFunc", e.FieldUseFunc);
+                newBody = ReplaceAssignment(newBody, "battleUseFunc", e.BattleUseFunc);
+                newBody = ReplaceAssignment(newBody, "partyUse", e.PartyUse);
+
+                // Update nested partyUseParam block
+                var partyRx = new System.Text.RegularExpressions.Regex(@"\.partyUseParam\s*=\s*\{(?<p>[\s\S]*?)\}", System.Text.RegularExpressions.RegexOptions.Multiline);
+                var pm = partyRx.Match(newBody);
+                if (pm.Success)
+                {
+                    string pbody = pm.Groups["p"].Value;
+                    foreach (var kv in e.PartyFlags)
+                    {
+                        pbody = ReplaceAssignment(pbody, kv.Key, kv.Value);
+                    }
+                    foreach (var kv in e.PartyParams)
+                    {
+                        pbody = ReplaceAssignment(pbody, kv.Key, kv.Value);
+                    }
+                    // splice back
+                    newBody = newBody.Substring(0, pm.Groups["p"].Index) + pbody + newBody.Substring(pm.Groups["p"].Index + pm.Groups["p"].Length);
+                }
+                else if ((e.PartyFlags.Count + e.PartyParams.Count) > 0)
+                {
+                    // Insert minimal partyUseParam block before closing brace
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("\n        .partyUseParam = {\n");
+                    foreach (var kv in e.PartyFlags) sb.Append($"            .{kv.Key} = {kv.Value},\n");
+                    foreach (var kv in e.PartyParams) sb.Append($"            .{kv.Key} = {kv.Value},\n");
+                    sb.Append("        },\n");
+                    // inject at end of body
+                    newBody = newBody.TrimEnd();
+                    newBody += sb.ToString();
+                }
+
+                // Reassemble the block
+                string newBlock = fullBlock.Replace(m.Groups["body"].Value, newBody);
+                // Replace in the full text
+                normalized = normalized.Substring(0, start) + newBlock + normalized.Substring(start + length);
+            }
+
+            string result = hadCrLf ? normalized.Replace("\n", "\r\n") : normalized;
+            return Task.FromResult(result);
+        }
+
+        private static string ReplaceAssignment(string body, string field, string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return body;
+            var rx = new System.Text.RegularExpressions.Regex(@"(\." + System.Text.RegularExpressions.Regex.Escape(field) + @"\s*=\s*)([^,\}\n]+)", System.Text.RegularExpressions.RegexOptions.Multiline);
+            if (rx.IsMatch(body))
+            {
+                return rx.Replace(body, m => m.Groups[1].Value + value, 1);
+            }
+            // If field not found, append it near end (best-effort)
+            int insertPos = body.LastIndexOf('}');
+            if (insertPos < 0) insertPos = body.Length;
+            var line = "\n        ." + field + " = " + value + ",\n";
+            return body.Insert(insertPos, line);
+        }
+
+        // Preview/save item names and descriptions in data/text/222.txt and 221.txt
+        public static async Task<string> PreviewItemTextAsync(List<(int ItemId, string? Name, string? Description)> changes)
+        {
+            if (ProjectContext.RootPath == null || changes == null || changes.Count == 0) return string.Empty;
+            string? namesPath = HGParsers.PathItemNames ?? System.IO.Path.Combine(ProjectContext.RootPath, "data", "text", "222.txt");
+            string? descPath = HGParsers.PathItemDescriptions ?? System.IO.Path.Combine(ProjectContext.RootPath, "data", "text", "221.txt");
+            var diffs = new System.Text.StringBuilder();
+
+            if (namesPath != null && System.IO.File.Exists(namesPath))
+            {
+                var original = await System.IO.File.ReadAllTextAsync(namesPath);
+                var updated = await ApplyTextChangesAsync(original, changes, isNames: true);
+                diffs.AppendLine(ComputeUnifiedDiff(original, updated, "222.txt"));
+            }
+            if (descPath != null && System.IO.File.Exists(descPath))
+            {
+                var original = await System.IO.File.ReadAllTextAsync(descPath);
+                var updated = await ApplyTextChangesAsync(original, changes, isNames: false);
+                diffs.AppendLine(ComputeUnifiedDiff(original, updated, "221.txt"));
+            }
+            return diffs.ToString();
+        }
+
+        public static async Task SaveItemTextAsync(List<(int ItemId, string? Name, string? Description)> changes)
+        {
+            if (ProjectContext.RootPath == null || changes == null || changes.Count == 0) return;
+            string? namesPath = HGParsers.PathItemNames ?? System.IO.Path.Combine(ProjectContext.RootPath, "data", "text", "222.txt");
+            string? descPath = HGParsers.PathItemDescriptions ?? System.IO.Path.Combine(ProjectContext.RootPath, "data", "text", "221.txt");
+
+            if (namesPath != null && System.IO.File.Exists(namesPath))
+            {
+                var original = await System.IO.File.ReadAllTextAsync(namesPath);
+                var updated = await ApplyTextChangesAsync(original, changes, isNames: true);
+                var backup = namesPath + ".bak";
+                try { System.IO.File.Copy(namesPath, backup, true); } catch { }
+                await System.IO.File.WriteAllTextAsync(namesPath, updated);
+                HGEngineGUI.Services.ChangeLog.Record(namesPath, updated.Length);
+            }
+            if (descPath != null && System.IO.File.Exists(descPath))
+            {
+                var original = await System.IO.File.ReadAllTextAsync(descPath);
+                var updated = await ApplyTextChangesAsync(original, changes, isNames: false);
+                var backup = descPath + ".bak";
+                try { System.IO.File.Copy(descPath, backup, true); } catch { }
+                await System.IO.File.WriteAllTextAsync(descPath, updated);
+                HGEngineGUI.Services.ChangeLog.Record(descPath, updated.Length);
+            }
+        }
+
+        private static Task<string> ApplyTextChangesAsync(string original, List<(int ItemId, string? Name, string? Description)> changes, bool isNames)
+        {
+            bool hadCrLf = original.Contains("\r\n");
+            var lines = (hadCrLf ? original.Replace("\r\n", "\n") : original).Split('\n').ToList();
+            int maxIndex = lines.Count - 1;
+            foreach (var ch in changes)
+            {
+                int idx = ch.ItemId; // mapping is 0-based id -> line index
+                if (idx < 0) continue;
+                if (idx > maxIndex)
+                {
+                    // grow with placeholders
+                    while (maxIndex < idx)
+                    {
+                        lines.Add(isNames ? string.Empty : "-----");
+                        maxIndex++;
+                    }
+                }
+                if (isNames)
+                {
+                    if (ch.Name != null) lines[idx] = ch.Name.Replace("\r\n", "\n");
+                }
+                else
+                {
+                    if (ch.Description != null) lines[idx] = ch.Description.Replace("\r\n", "\n");
+                }
+            }
+            string joined = string.Join("\n", lines);
+            return Task.FromResult(hadCrLf ? joined.Replace("\n", "\r\n") : joined);
+        }
+
         // Mart items: preview/save by reconstructing .halfword sequences inside armips/asm/custom/mart_items.s
         public static async Task<string> PreviewMartItemsAsync(List<HGEngineGUI.Data.HGParsers.MartSection> sections)
         {
@@ -256,7 +450,8 @@ namespace HGEngineGUI.Data
             return ComputeUnifiedDiff(text, updated, "eggmoves.s");
         }
 
-        public static async Task<string> PreviewEvolutionsAsync(string speciesMacro, List<(string method, int param, string target)> evolutions)
+        // Accept expanded UI representation in future: one row per evolution line that internally may include multiple method conditions.
+        public static async Task<string> PreviewEvolutionsAsync(string speciesMacro, List<(string method, int param, string target, int form)> evolutions)
         {
             if (ProjectContext.RootPath == null) return string.Empty;
             var path = HGParsers.PathEvo ?? Path.Combine(ProjectContext.RootPath, "armips", "data", "evodata.s");
@@ -271,9 +466,31 @@ namespace HGEngineGUI.Data
             int endIdx = nextIdx >= 0 ? nextIdx : text.Length;
             var sb = new StringBuilder();
             sb.AppendLine(blockStart);
-            foreach (var (method, param, target) in evolutions)
+            foreach (var (method, param, target, form) in evolutions)
             {
-                sb.AppendLine($"    evolution {method}, {param}, {target}");
+                var paramToken = param.ToString();
+                // Replace param with macro tokens when applicable
+                if (method == "EVO_ITEM" || method == "EVO_TRADE_ITEM" || method == "EVO_STONE" || method == "EVO_STONE_MALE" || method == "EVO_STONE_FEMALE" || method == "EVO_ITEM_DAY" || method == "EVO_ITEM_NIGHT")
+                {
+                    if (HGParsers.TryGetItemMacro(param, out var mac)) paramToken = mac;
+                }
+                else if (method == "EVO_HAS_MOVE")
+                {
+                    if (HGParsers.TryGetMoveMacro(param, out var mac)) paramToken = mac;
+                }
+                else if (method == "EVO_HAS_MOVE_TYPE")
+                {
+                    if (HGParsers.TryGetTypeMacro(param, out var mac)) paramToken = mac;
+                }
+                else if (method == "EVO_OTHER_PARTY_MON" || method == "EVO_TRADE_SPECIFIC_MON")
+                {
+                    if (HGParsers.TryGetSpeciesMacro(param, out var mac)) paramToken = mac;
+                }
+
+                if (form > 0)
+                    sb.AppendLine($"    evolution {method}, {paramToken}, {target} | ({form} << 11)");
+                else
+                    sb.AppendLine($"    evolution {method}, {paramToken}, {target}");
             }
             int count = evolutions.Count; while (count++ < 9) sb.AppendLine("    evolution EVO_NONE, 0, SPECIES_NONE");
             sb.AppendLine("    terminateevodata");
@@ -374,6 +591,34 @@ namespace HGEngineGUI.Data
             HGEngineGUI.Services.ChangeLog.Record(path, updated.Length);
         }
 
+        // Base Experience table (data/BaseExperienceTable.c)
+        public static async Task<string> PreviewBaseExpAsync(string speciesMacro, int baseExp)
+        {
+            if (ProjectContext.RootPath == null) return string.Empty;
+            var path = Path.Combine(ProjectContext.RootPath, "data", "BaseExperienceTable.c");
+            if (!File.Exists(path)) return string.Empty;
+            var original = await File.ReadAllTextAsync(path);
+            var pattern = new Regex(@"(\[\s*" + Regex.Escape(speciesMacro) + @"\s*\]\s*=\s*)(\d+)(\s*,)", RegexOptions.Multiline);
+            if (!pattern.IsMatch(original)) return string.Empty;
+            var updated = pattern.Replace(original, m => m.Groups[1].Value + baseExp.ToString() + m.Groups[3].Value, 1);
+            return ComputeUnifiedDiff(original, updated, "BaseExperienceTable.c");
+        }
+
+        public static async Task SaveBaseExpAsync(string speciesMacro, int baseExp)
+        {
+            if (ProjectContext.RootPath == null) return;
+            var path = Path.Combine(ProjectContext.RootPath, "data", "BaseExperienceTable.c");
+            if (!File.Exists(path)) return;
+            var text = await File.ReadAllTextAsync(path);
+            var pattern = new Regex(@"(\[\s*" + Regex.Escape(speciesMacro) + @"\s*\]\s*=\s*)(\d+)(\s*,)", RegexOptions.Multiline);
+            if (!pattern.IsMatch(text)) return;
+            var updated = pattern.Replace(text, m => m.Groups[1].Value + baseExp.ToString() + m.Groups[3].Value, 1);
+            var backup = path + ".bak";
+            try { File.Copy(path, backup, true); } catch { }
+            await File.WriteAllTextAsync(path, updated);
+            HGEngineGUI.Services.ChangeLog.Record(path, updated.Length);
+        }
+
         // Overview save/preview
         public static async Task SaveOverviewAsync(string speciesMacro, HGParsers.SpeciesOverview ov)
         {
@@ -388,12 +633,29 @@ namespace HGEngineGUI.Data
             int nextIdx = text.IndexOf("\n\nmondata ", startIdx, StringComparison.Ordinal);
             int endIdx = nextIdx >= 0 ? nextIdx : text.Length;
 
+            // Extract existing header name and any lines we don't currently manage (e.g., baseexp, colorflip)
+            string existingBlock = text.Substring(startIdx, endIdx - startIdx);
+            string headerLine = existingBlock.Split('\n').FirstOrDefault() ?? string.Empty;
+            var headerNameMatch = new System.Text.RegularExpressions.Regex(@"mondata\s+" + System.Text.RegularExpressions.Regex.Escape(speciesMacro) + @",\s*""(?<name>[^""]*)""").Match(headerLine);
+            string displayName = headerNameMatch.Success ? headerNameMatch.Groups["name"].Value : string.Empty;
+            // Preserve baseexp line (commented in this repo) and colorflip if present
+            string preservedBaseExp = string.Empty;
+            string preservedColorFlip = string.Empty;
+            foreach (var line in existingBlock.Replace("\r\n", "\n").Split('\n'))
+            {
+                var trimmed = line.Trim();
+                if (trimmed.StartsWith("baseexp ", StringComparison.Ordinal)) preservedBaseExp = line;
+                if (trimmed.StartsWith("colorflip ", StringComparison.Ordinal)) preservedColorFlip = line;
+            }
+
             var sb = new StringBuilder();
-            sb.AppendLine(blockStart + " \"\"");
+            sb.AppendLine(blockStart + $" \"{EscapeQuotes(displayName)}\"");
             sb.AppendLine($"    basestats {ov.BaseHp}, {ov.BaseAttack}, {ov.BaseDefense}, {ov.BaseSpeed}, {ov.BaseSpAttack}, {ov.BaseSpDefense}");
             sb.AppendLine($"    types {ov.Type1}, {ov.Type2}");
             sb.AppendLine($"    catchrate {ov.CatchRate}");
-            // BaseExp is managed in data/BaseExperienceTable.c; do not write in mondata.s
+            // Preserve optional lines we don't edit (baseexp comment) in canonical order under catchrate
+            if (!string.IsNullOrWhiteSpace(preservedBaseExp)) sb.AppendLine(preservedBaseExp);
+            // BaseExp is managed in data/BaseExperienceTable.c; actual value written there via SaveBaseExpAsync
             sb.AppendLine($"    evyields {ov.EvYields.hp}, {ov.EvYields.atk}, {ov.EvYields.def}, {ov.EvYields.spd}, {ov.EvYields.spatk}, {ov.EvYields.spdef}");
             sb.AppendLine($"    items {ov.Item1}, {ov.Item2}");
             sb.AppendLine($"    genderratio {ov.GenderRatio}");
@@ -402,12 +664,15 @@ namespace HGEngineGUI.Data
             sb.AppendLine($"    growthrate {ov.GrowthRate}");
             sb.AppendLine($"    egggroups {ov.EggGroup1}, {ov.EggGroup2}");
             sb.AppendLine($"    abilities {ov.Ability1}, {ov.Ability2}");
-            if (ov.RunChance > 0) sb.AppendLine($"    runchance {ov.RunChance}");
+            // Always write runchance, even if zero, to mirror original formatting
+            sb.AppendLine($"    runchance {ov.RunChance}");
             // Hidden ability is stored in data/HiddenAbilityTable.c and not in mondata.s
-            if (!string.IsNullOrWhiteSpace(ov.DexClassification)) sb.AppendLine($"    mondexclassification {speciesMacro}, \"\"{EscapeQuotes(ov.DexClassification)}\"\"");
-            if (!string.IsNullOrWhiteSpace(ov.DexEntry)) sb.AppendLine($"    mondexentry {speciesMacro}, \"\"{EscapeQuotes(ov.DexEntry)}\"\"");
-            if (!string.IsNullOrWhiteSpace(ov.DexHeight)) sb.AppendLine($"    mondexheight {speciesMacro}, \"\"{EscapeQuotes(ov.DexHeight)}\"\"");
-            if (!string.IsNullOrWhiteSpace(ov.DexWeight)) sb.AppendLine($"    mondexweight {speciesMacro}, \"\"{EscapeQuotes(ov.DexWeight)}\"\"");
+            // Preserve optional lines we don't edit (colorflip)
+            if (!string.IsNullOrWhiteSpace(preservedColorFlip)) sb.AppendLine(preservedColorFlip);
+            if (!string.IsNullOrWhiteSpace(ov.DexClassification)) sb.AppendLine($"    mondexclassification {speciesMacro}, \"{EscapeQuotes(ov.DexClassification)}\"");
+            if (!string.IsNullOrWhiteSpace(ov.DexEntry)) sb.AppendLine($"    mondexentry {speciesMacro}, \"{EscapeQuotes(ov.DexEntry)}\"");
+            if (!string.IsNullOrWhiteSpace(ov.DexHeight)) sb.AppendLine($"    mondexheight {speciesMacro}, \"{EscapeQuotes(ov.DexHeight)}\"");
+            if (!string.IsNullOrWhiteSpace(ov.DexWeight)) sb.AppendLine($"    mondexweight {speciesMacro}, \"{EscapeQuotes(ov.DexWeight)}\"");
             sb.AppendLine();
 
             var updated = text.Substring(0, startIdx) + sb.ToString() + text.Substring(endIdx);
@@ -429,11 +694,27 @@ namespace HGEngineGUI.Data
             int endIdx = nextIdx >= 0 ? nextIdx : text.Length;
 
             var sb = new StringBuilder();
-            sb.AppendLine(blockStart + " \"\"");
+            // Read existing header name and preserved lines for preview as well
+            string existingBlock = text.Substring(startIdx, endIdx - startIdx);
+            string headerLine = existingBlock.Split('\n').FirstOrDefault() ?? string.Empty;
+            var headerNameMatch = new System.Text.RegularExpressions.Regex(@"mondata\s+" + System.Text.RegularExpressions.Regex.Escape(speciesMacro) + @",\s*""(?<name>[^""]*)""").Match(headerLine);
+            string displayName = headerNameMatch.Success ? headerNameMatch.Groups["name"].Value : string.Empty;
+            string preservedBaseExp = string.Empty;
+            string preservedColorFlip = string.Empty;
+            foreach (var line in existingBlock.Replace("\r\n", "\n").Split('\n'))
+            {
+                var trimmed = line.Trim();
+                if (trimmed.StartsWith("baseexp ", StringComparison.Ordinal)) preservedBaseExp = line;
+                if (trimmed.StartsWith("colorflip ", StringComparison.Ordinal)) preservedColorFlip = line;
+            }
+
+            sb.AppendLine(blockStart + $" \"{EscapeQuotes(displayName)}\"");
             sb.AppendLine($"    basestats {ov.BaseHp}, {ov.BaseAttack}, {ov.BaseDefense}, {ov.BaseSpeed}, {ov.BaseSpAttack}, {ov.BaseSpDefense}");
             sb.AppendLine($"    types {ov.Type1}, {ov.Type2}");
             sb.AppendLine($"    catchrate {ov.CatchRate}");
-            // BaseExp is managed in data/BaseExperienceTable.c; do not write in mondata.s
+            // Preserve baseexp comment in canonical order
+            if (!string.IsNullOrWhiteSpace(preservedBaseExp)) sb.AppendLine(preservedBaseExp);
+            // BaseExp actual value preview handled via PreviewBaseExpAsync if needed
             sb.AppendLine($"    evyields {ov.EvYields.hp}, {ov.EvYields.atk}, {ov.EvYields.def}, {ov.EvYields.spd}, {ov.EvYields.spatk}, {ov.EvYields.spdef}");
             sb.AppendLine($"    items {ov.Item1}, {ov.Item2}");
             sb.AppendLine($"    genderratio {ov.GenderRatio}");
@@ -442,11 +723,12 @@ namespace HGEngineGUI.Data
             sb.AppendLine($"    growthrate {ov.GrowthRate}");
             sb.AppendLine($"    egggroups {ov.EggGroup1}, {ov.EggGroup2}");
             sb.AppendLine($"    abilities {ov.Ability1}, {ov.Ability2}");
-            if (ov.RunChance > 0) sb.AppendLine($"    runchance {ov.RunChance}");
-            if (!string.IsNullOrWhiteSpace(ov.DexClassification)) sb.AppendLine($"    mondexclassification {speciesMacro}, \"\"{EscapeQuotes(ov.DexClassification)}\"\"");
-            if (!string.IsNullOrWhiteSpace(ov.DexEntry)) sb.AppendLine($"    mondexentry {speciesMacro}, \"\"{EscapeQuotes(ov.DexEntry)}\"\"");
-            if (!string.IsNullOrWhiteSpace(ov.DexHeight)) sb.AppendLine($"    mondexheight {speciesMacro}, \"\"{EscapeQuotes(ov.DexHeight)}\"\"");
-            if (!string.IsNullOrWhiteSpace(ov.DexWeight)) sb.AppendLine($"    mondexweight {speciesMacro}, \"\"{EscapeQuotes(ov.DexWeight)}\"\"");
+            sb.AppendLine($"    runchance {ov.RunChance}");
+            if (!string.IsNullOrWhiteSpace(preservedColorFlip)) sb.AppendLine(preservedColorFlip);
+            if (!string.IsNullOrWhiteSpace(ov.DexClassification)) sb.AppendLine($"    mondexclassification {speciesMacro}, \"{EscapeQuotes(ov.DexClassification)}\"");
+            if (!string.IsNullOrWhiteSpace(ov.DexEntry)) sb.AppendLine($"    mondexentry {speciesMacro}, \"{EscapeQuotes(ov.DexEntry)}\"");
+            if (!string.IsNullOrWhiteSpace(ov.DexHeight)) sb.AppendLine($"    mondexheight {speciesMacro}, \"{EscapeQuotes(ov.DexHeight)}\"");
+            if (!string.IsNullOrWhiteSpace(ov.DexWeight)) sb.AppendLine($"    mondexweight {speciesMacro}, \"{EscapeQuotes(ov.DexWeight)}\"");
             sb.AppendLine();
 
             var updated = text.Substring(0, startIdx) + sb.ToString() + text.Substring(endIdx);
@@ -780,7 +1062,7 @@ namespace HGEngineGUI.Data
         }
 
         // Save evolutions for a species into armips/data/evodata.s
-        public static async Task SaveEvolutionsAsync(string speciesMacro, List<(string method, int param, string target)> evolutions)
+        public static async Task SaveEvolutionsAsync(string speciesMacro, List<(string method, int param, string target, int form)> evolutions)
         {
             if (ProjectContext.RootPath == null) return;
             var path = Path.Combine(ProjectContext.RootPath, "armips", "data", "evodata.s");
@@ -797,9 +1079,30 @@ namespace HGEngineGUI.Data
 
             var sb = new StringBuilder();
             sb.AppendLine(blockStart);
-            foreach (var (method, param, target) in evolutions)
+            foreach (var (method, param, target, form) in evolutions)
             {
-                sb.AppendLine($"    evolution {method}, {param}, {target}");
+                var paramToken = param.ToString();
+                if (method == "EVO_ITEM" || method == "EVO_TRADE_ITEM" || method == "EVO_STONE" || method == "EVO_STONE_MALE" || method == "EVO_STONE_FEMALE" || method == "EVO_ITEM_DAY" || method == "EVO_ITEM_NIGHT")
+                {
+                    if (HGParsers.TryGetItemMacro(param, out var mac)) paramToken = mac;
+                }
+                else if (method == "EVO_HAS_MOVE")
+                {
+                    if (HGParsers.TryGetMoveMacro(param, out var mac)) paramToken = mac;
+                }
+                else if (method == "EVO_HAS_MOVE_TYPE")
+                {
+                    if (HGParsers.TryGetTypeMacro(param, out var mac)) paramToken = mac;
+                }
+                else if (method == "EVO_OTHER_PARTY_MON" || method == "EVO_TRADE_SPECIFIC_MON")
+                {
+                    if (HGParsers.TryGetSpeciesMacro(param, out var mac)) paramToken = mac;
+                }
+
+                if (form > 0)
+                    sb.AppendLine($"    evolution {method}, {paramToken}, {target} | ({form} << 11)");
+                else
+                    sb.AppendLine($"    evolution {method}, {paramToken}, {target}");
             }
             // Fill remaining slots to 9 with EVO_NONE for structure consistency (optional)
             int count = evolutions.Count;

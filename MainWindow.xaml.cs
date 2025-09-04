@@ -10,6 +10,8 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.UI.Windowing;
+using WinRT.Interop;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 
@@ -24,6 +26,24 @@ namespace HGEngineGUI
         {
             InitializeComponent();
             ContentFrame.Navigate(typeof(Pages.StartPage));
+
+            // Wire up back navigation for the top NavigationView
+            RootNavView.BackRequested += OnBackRequested;
+            ContentFrame.Navigated += OnContentNavigated;
+
+            // Try to set a custom window icon if present at Assets\\App.ico
+            try
+            {
+                var hwnd = WindowNative.GetWindowHandle(this);
+                var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
+                var appWindow = AppWindow.GetFromWindowId(windowId);
+                var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "App.ico");
+                if (System.IO.File.Exists(iconPath))
+                {
+                    appWindow?.SetIcon(iconPath);
+                }
+            }
+            catch { /* non-fatal if icon cannot be set */ }
             UpdateStatus("Ready");
         }
 
@@ -64,6 +84,29 @@ namespace HGEngineGUI
                 StatusProject.Text = ProjectContext.RootPath ?? "(no project)";
                 StatusMessage.Text = message;
                 StatusTiming.Text = timing;
+            }
+            catch { }
+        }
+
+        private void OnBackRequested(NavigationView sender, NavigationViewBackRequestedEventArgs args)
+        {
+            if (ContentFrame.CanGoBack)
+            {
+                ContentFrame.GoBack();
+            }
+            UpdateBackButton();
+        }
+
+        private void OnContentNavigated(object sender, NavigationEventArgs e)
+        {
+            UpdateBackButton();
+        }
+
+        private void UpdateBackButton()
+        {
+            try
+            {
+                RootNavView.IsBackEnabled = ContentFrame.CanGoBack;
             }
             catch { }
         }

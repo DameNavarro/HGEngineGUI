@@ -51,6 +51,34 @@ namespace HGEngineGUI.Pages
             get => _target;
             set => SetProperty(ref _target, value);
         }
+
+        private int _form;
+        public int Form
+        {
+            get => _form;
+            set => SetProperty(ref _form, value);
+        }
+
+        // Dynamic list of method conditions, each representing one EVO_* with its own param
+        private System.Collections.ObjectModel.ObservableCollection<EvoCondition> _conditions = new();
+        public System.Collections.ObjectModel.ObservableCollection<EvoCondition> Conditions => _conditions;
+    }
+
+    public class EvoCondition : ObservableObject
+    {
+        private string _method = string.Empty; // EVO_*
+        public string Method
+        {
+            get => _method;
+            set => SetProperty(ref _method, value);
+        }
+
+        private int _param;
+        public int Param
+        {
+            get => _param;
+            set => SetProperty(ref _param, value);
+        }
     }
 }
 

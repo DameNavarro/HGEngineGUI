@@ -26,7 +26,7 @@ namespace HGEngineGUI.Pages
         private List<string> _tmhmAll = new();
         private HashSet<string> _tmhmSelected = new();
         private List<string> _tmhmView = new();
-        private List<(string method, int param, string target)> _evolutions = new();
+        private List<(string method, int param, string target, int form)> _evolutions = new();
         private List<EvolutionEntry> _evoModel = new();
         private HashSet<string> _tutorSelected = new();
         private List<(string tutor, string move, int cost)> _tutorAll = new();
@@ -70,9 +70,20 @@ namespace HGEngineGUI.Pages
         {
             if (EvolutionStack == null) return;
             EvolutionStack.Children.Clear();
+            int blockIndex = 0;
             foreach (var row in _evoModel)
             {
-                var outer = new StackPanel { Spacing = 8, Padding = new Thickness(8) };
+                // Visual block separator to distinguish multiple evolution lines
+                var border = new Border
+                {
+                    BorderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.DimGray),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(4),
+                    Margin = new Thickness(4),
+                    Padding = new Thickness(8)
+                };
+                var outer = new StackPanel { Spacing = 8 };
+                border.Child = outer;
 
                 // Row 1: method, param, target
                 var top = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
@@ -111,74 +122,135 @@ namespace HGEngineGUI.Pages
                 targetCombo.SelectionChanged += (s, e) => { row.Target = (targetCombo.SelectedItem as string) ?? (targetCombo.Text ?? string.Empty); };
                 targetCombo.LostFocus += (s, e) => { row.Target = targetCombo.Text ?? string.Empty; };
 
-                top.Children.Add(methodCombo);
-                top.Children.Add(paramBox);
+                var formBox = new TextBox
+                {
+                    Width = 100,
+                    Header = "Form",
+                    Text = row.Form.ToString()
+                };
+                formBox.TextChanging += (tb, args) => { if (int.TryParse(formBox.Text, out var fv)) row.Form = fv; };
+
+                // Hide old method/param editors; keep only Target and Form in the header
+                // top.Children.Add(methodCombo);
+                // top.Children.Add(paramBox);
                 top.Children.Add(targetCombo);
+                top.Children.Add(formBox);
                 outer.Children.Add(top);
 
-                // Row 2: helpers and remove
-                var bottom = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-                var itemCombo = new ComboBox { Width = 220, Header = "Item (EVO_ITEM)" };
-                itemCombo.ItemsSource = Data.HGParsers.ItemMacros;
-                itemCombo.SelectionChanged += (s, e) =>
-                {
-                    if (!string.Equals(row.Method, "EVO_ITEM", StringComparison.Ordinal)) return;
-                    var macro = itemCombo.SelectedItem as string;
-                    if (string.IsNullOrEmpty(macro)) return;
-                    if (Data.HGParsers.TryGetItemValue(macro, out var id)) row.Param = id;
-                };
-
-                var moveCombo = new ComboBox { Width = 220, Header = "Move (EVO_MOVE)" };
-                moveCombo.ItemsSource = Data.HGParsers.MoveMacros;
-                moveCombo.SelectionChanged += (s, e) =>
-                {
-                    if (!string.Equals(row.Method, "EVO_MOVE", StringComparison.Ordinal)) return;
-                    var macro = moveCombo.SelectedItem as string;
-                    if (string.IsNullOrEmpty(macro)) return;
-                    if (Data.HGParsers.TryGetMoveValue(macro, out var id)) row.Param = id;
-                };
-
-                var mapCombo = new ComboBox { Width = 220, Header = "Map (EVO_MAP)" };
-                mapCombo.ItemsSource = Data.HGParsers.MapMacros;
-                mapCombo.SelectionChanged += (s, e) =>
-                {
-                    if (!string.Equals(row.Method, "EVO_MAP", StringComparison.Ordinal)) return;
-                    var macro = mapCombo.SelectedItem as string;
-                    if (string.IsNullOrEmpty(macro)) return;
-                    if (Data.HGParsers.TryGetMapValue(macro, out var id)) row.Param = id;
-                };
-
-                var timeCombo = new ComboBox { Width = 160, Header = "Friend time" };
-                timeCombo.Items.Add("DAY");
-                timeCombo.Items.Add("NIGHT");
-                timeCombo.Items.Add("MORNING");
-                timeCombo.Items.Add("EVENING");
-                timeCombo.SelectionChanged += (s, e) =>
-                {
-                    if (!row.Method.StartsWith("EVO_FRIENDSHIP", StringComparison.Ordinal)) return;
-                    var val = timeCombo.SelectedItem as string;
-                    int mapped = 0;
-                    switch (val)
-                    {
-                        case "DAY": mapped = 1; break;
-                        case "NIGHT": mapped = 2; break;
-                        case "MORNING": mapped = 3; break;
-                        case "EVENING": mapped = 4; break;
-                    }
-                    row.Param = mapped;
-                };
-
+                // Row 2: remove button only (legacy helpers removed)
+                var bottom = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
                 var removeBtn = new Button { Content = "Remove" };
                 removeBtn.Click += (s, e) => { _evoModel.Remove(row); RenderEvolutionsStack(); };
-
-                bottom.Children.Add(itemCombo);
-                bottom.Children.Add(moveCombo);
-                bottom.Children.Add(mapCombo);
-                bottom.Children.Add(timeCombo);
                 bottom.Children.Add(removeBtn);
                 outer.Children.Add(bottom);
 
-                EvolutionStack.Children.Add(outer);
+                // Per-method conditions area
+                var condHeader = new TextBlock { Text = "Conditions", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+                outer.Children.Add(condHeader);
+                var condList = new StackPanel { Spacing = 6 };
+                // Renderer for each condition
+                void RenderCondRows()
+                {
+                    condList.Children.Clear();
+                    foreach (var cond in row.Conditions.ToList())
+                    {
+                        var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                        var methodC = new ComboBox { Width = 220, IsEditable = true };
+                        methodC.ItemsSource = Data.HGParsers.EvolutionMethodMacros;
+                        if (!string.IsNullOrWhiteSpace(cond.Method) && Data.HGParsers.EvolutionMethodMacros.Contains(cond.Method)) methodC.SelectedItem = cond.Method;
+                        methodC.Text = cond.Method;
+                        methodC.SelectionChanged += (s, e) => { cond.Method = (methodC.SelectedItem as string) ?? (methodC.Text ?? string.Empty); };
+                        methodC.LostFocus += (s, e) => { cond.Method = methodC.Text ?? string.Empty; };
+
+                        // Dynamic param editor
+                        FrameworkElement paramEditor = new TextBox { Width = 140, Header = "Param", Text = cond.Param.ToString() };
+                        void RebindParamEditor()
+                        {
+                            // Default integer box
+                            FrameworkElement editor;
+                            string m = cond.Method ?? string.Empty;
+                            if (m == "EVO_ITEM" || m == "EVO_TRADE_ITEM" || m == "EVO_STONE" || m == "EVO_STONE_MALE" || m == "EVO_STONE_FEMALE" || m == "EVO_ITEM_DAY" || m == "EVO_ITEM_NIGHT")
+                            {
+                                var cb = new ComboBox { Width = 240, Header = "Item" };
+                                var items = Data.HGParsers.ItemMacros.ToList();
+                                items.Sort(StringComparer.Ordinal);
+                                cb.ItemsSource = items;
+                                cb.SelectionChanged += (s, e) => { var macro = cb.SelectedItem as string; if (!string.IsNullOrEmpty(macro) && Data.HGParsers.TryGetItemValue(macro, out var id)) cond.Param = id; };
+                                editor = cb;
+                            }
+                            else if (m == "EVO_HAS_MOVE")
+                            {
+                                var cb = new ComboBox { Width = 260, Header = "Move" };
+                                var moves = Data.HGParsers.MoveMacros.ToList();
+                                moves.Sort(StringComparer.Ordinal);
+                                cb.ItemsSource = moves;
+                                cb.SelectionChanged += (s, e) => { var macro = cb.SelectedItem as string; if (!string.IsNullOrEmpty(macro) && Data.HGParsers.TryGetMoveValue(macro, out var id)) cond.Param = id; };
+                                editor = cb;
+                            }
+                            else if (m == "EVO_HAS_MOVE_TYPE")
+                            {
+                                var cb = new ComboBox { Width = 220, Header = "Type" };
+                                var types = Data.HGParsers.TypeMacros.ToList();
+                                types.Sort(StringComparer.Ordinal);
+                                cb.ItemsSource = types;
+                                cb.SelectionChanged += (s, e) => { var macro = cb.SelectedItem as string; if (!string.IsNullOrEmpty(macro) && Data.HGParsers.TryGetTypeValue(macro, out var id)) cond.Param = id; };
+                                editor = cb;
+                            }
+                            else if (m == "EVO_OTHER_PARTY_MON" || m == "EVO_TRADE_SPECIFIC_MON")
+                            {
+                                var cb = new ComboBox { Width = 300, Header = "Species" };
+                                var species = Data.HGParsers.SpeciesMacroNames.ToList();
+                                species.Sort(StringComparer.Ordinal);
+                                cb.ItemsSource = species;
+                                cb.SelectionChanged += (s, e) => { var macro = cb.SelectedItem as string; if (!string.IsNullOrEmpty(macro) && Data.HGParsers.TryGetSpeciesValue(macro, out var id)) cond.Param = id; };
+                                editor = cb;
+                            }
+                            else if (m == "EVO_CORONET" || m == "EVO_ETERNA" || m == "EVO_ROUTE217")
+                            {
+                                // These are location checks but param unused; keep a disabled box for clarity
+                                var tb = new TextBox { Width = 120, Header = "Param", IsEnabled = false, Text = "0" };
+                                editor = tb;
+                            }
+                            else
+                            {
+                                var tb = new TextBox { Width = 140, Header = "Param", Text = cond.Param.ToString() };
+                                tb.TextChanging += (s, e) => { if (int.TryParse(tb.Text, out var v)) cond.Param = v; };
+                                editor = tb;
+                            }
+                            int idx = line.Children.IndexOf(paramEditor);
+                            if (idx >= 0) line.Children.RemoveAt(idx);
+                            paramEditor = editor;
+                            line.Children.Insert(1, paramEditor);
+                        }
+
+                        methodC.SelectionChanged += (s, e) => RebindParamEditor();
+                        line.Children.Add(methodC);
+                        line.Children.Add(paramEditor);
+                        condList.Children.Add(line);
+
+                        // Initial bind based on current method
+                        RebindParamEditor();
+                    }
+                }
+                RenderCondRows();
+                outer.Children.Add(condList);
+
+                var addCond = new Button { Content = "Add Method" };
+                addCond.Click += (s, e) =>
+                {
+                    // Create a new evolution block (entry) instead of adding a condition to the current block
+                    var entry = new EvolutionEntry { Method = "EVO_LEVEL", Param = 1, Target = string.Empty, Form = 0 };
+                    entry.Conditions.Add(new EvoCondition { Method = "EVO_LEVEL", Param = 1 });
+                    _evoModel.Add(entry);
+                    RenderEvolutionsStack();
+                };
+                outer.Children.Add(addCond);
+
+                // Remove the legacy, top-level method UI: replace header label to make intent clear
+                var headerText = new TextBlock { Text = $"Evolution #{++blockIndex}", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+                outer.Children.Insert(0, headerText);
+
+                EvolutionStack.Children.Add(border);
             }
             try { StatusText.Text = $"Evo rows (manual): {_evoModel.Count}"; } catch { }
         }
@@ -206,14 +278,11 @@ namespace HGEngineGUI.Pages
 
         private void SyncEvolutionsFromUi()
         {
-            _evoModel = _evoModel
-                .Select(e => new EvolutionEntry
-                {
-                    Method = (e.Method ?? string.Empty).Trim(),
-                    Param = e.Param,
-                    Target = (e.Target ?? string.Empty).Trim()
-                })
-                .ToList();
+            foreach (var e in _evoModel)
+            {
+                e.Method = (e.Method ?? string.Empty).Trim();
+                e.Target = (e.Target ?? string.Empty).Trim();
+            }
         }
         private void OnEggMovesListLoaded(object sender, RoutedEventArgs e) { }
 
@@ -324,7 +393,13 @@ namespace HGEngineGUI.Pages
             _levelUpModel = _levelUp.Select(m => new LevelUpEntry { Level = m.level, Move = m.move }).ToList();
             RenderLevelUpStack();
             _evolutions = Data.HGParsers.Evolutions.ToList();
-            _evoModel = _evolutions.Select(e => new EvolutionEntry { Method = e.method, Param = e.param, Target = e.target }).ToList();
+            _evoModel = _evolutions.Select(e =>
+            {
+                var en = new EvolutionEntry { Method = e.method, Param = e.param, Target = e.target, Form = e.form };
+                // Ensure each loaded evolution has at least one blank condition for UI consistency
+                en.Conditions.Add(new EvoCondition { Method = string.Empty, Param = 1 });
+                return en;
+            }).ToList();
             RenderEvolutionsStack();
             _egg = Data.HGParsers.EggMoves.ToList();
             _eggModel = _egg.Select(m => new EggMoveEntry { Move = m }).ToList();
@@ -506,49 +581,16 @@ namespace HGEngineGUI.Pages
         }
         private async void OnAddEvolution(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
-            var methodPicker = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.EvolutionMethodMacros, Header = "Method (EVO_*)", MinWidth = 280 };
-            var paramBox = new TextBox { Header = "Param (number)" };
-            var targetPicker = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.SpeciesMacroNames, Header = "Target (SPECIES_*)", MinWidth = 280 };
-            var itemPicker = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.ItemMacros, Header = "Item (EVO_ITEM)", MinWidth = 280 };
-            var movePicker = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.MoveMacros, Header = "Move (EVO_MOVE)", MinWidth = 280 };
-            var mapPicker = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.MapMacros, Header = "Map (EVO_MAP)", MinWidth = 280 };
-
-            var dialog = new ContentDialog
+            var entry = new EvolutionEntry
             {
-                Title = "Add Evolution",
-                Content = new StackPanel { Spacing = 8, Children = { methodPicker, paramBox, targetPicker, itemPicker, movePicker, mapPicker } },
-                PrimaryButtonText = "Add",
-                CloseButtonText = "Cancel",
-                XamlRoot = this.XamlRoot
+                Method = "EVO_LEVEL",
+                Param = 1,
+                Target = string.Empty,
+                Form = 0
             };
-            var res = await dialog.ShowAsync();
-            if (res == ContentDialogResult.Primary)
-            {
-                var method = (methodPicker.SelectedItem as string) ?? (methodPicker.Text ?? string.Empty);
-                var target = (targetPicker.SelectedItem as string) ?? (targetPicker.Text ?? string.Empty);
-                var paramText = (paramBox.Text ?? string.Empty).Trim();
-                // Helper pickers: write numeric param when applicable if user selected an item/move/map
-                if (string.Equals(method, "EVO_ITEM", StringComparison.OrdinalIgnoreCase))
-                {
-                    var macro = (itemPicker.SelectedItem as string) ?? (itemPicker.Text ?? string.Empty);
-                    if (Data.HGParsers.TryGetItemValue(macro, out var val)) paramText = val.ToString();
-                }
-                else if (string.Equals(method, "EVO_MOVE", StringComparison.OrdinalIgnoreCase))
-                {
-                    var macro = (movePicker.SelectedItem as string) ?? (movePicker.Text ?? string.Empty);
-                    if (Data.HGParsers.TryGetMoveValue(macro, out var val)) paramText = val.ToString();
-                }
-                else if (string.Equals(method, "EVO_MAP", StringComparison.OrdinalIgnoreCase))
-                {
-                    var macro = (mapPicker.SelectedItem as string) ?? (mapPicker.Text ?? string.Empty);
-                    if (Data.HGParsers.TryGetMapValue(macro, out var val)) paramText = val.ToString();
-                }
-                if (int.TryParse(paramText, out var param) && !string.IsNullOrWhiteSpace(method) && !string.IsNullOrWhiteSpace(target))
-                {
-                    _evoModel.Add(new EvolutionEntry { Method = method.Trim(), Param = param, Target = target.Trim() });
+            entry.Conditions.Add(new EvoCondition { Method = string.Empty, Param = 1 });
+            _evoModel.Add(entry);
                     RenderEvolutionsStack();
-                }
-            }
         }
 
         private void OnDeleteEvolution(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -587,7 +629,7 @@ namespace HGEngineGUI.Pages
         {
             if (_species == null) return;
             SyncEvolutionsFromUi();
-            var current = _evoModel.Select(e => (e.Method, e.Param, e.Target)).ToList();
+            var current = FlattenEvolutions();
             var errors = ValidateEvolutions(current);
             if (errors.Count > 0)
             {
@@ -604,7 +646,7 @@ namespace HGEngineGUI.Pages
         {
             if (_species == null) return;
             SyncEvolutionsFromUi();
-            var diff = await Data.HGSerializers.PreviewEvolutionsAsync(_species.Name, _evoModel.Select(e => (e.Method, e.Param, e.Target)).ToList());
+            var diff = await Data.HGSerializers.PreviewEvolutionsAsync(_species.Name, FlattenEvolutions());
             await ShowDiffDialog(diff, "evodata.s");
         }
 
@@ -678,6 +720,8 @@ namespace HGEngineGUI.Pages
             var path = Data.HGParsers.PathMondata ?? Path.Combine(ProjectContext.RootPath ?? string.Empty, "armips", "data", "mondata.s");
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) { try { StatusText.Text = $"File not found: mondata.s"; } catch { } return; }
             await Data.HGSerializers.SaveOverviewAsync(_species.Name, ov);
+            // Persist Base Exp to data/BaseExperienceTable.c
+            await Data.HGSerializers.SaveBaseExpAsync(_species.Name, ov.BaseExp);
             // Also persist Hidden Ability via HiddenAbilityTable.c
             var hidden = (AbilityHiddenBox.SelectedItem as string) ?? ov.AbilityHidden;
             if (!string.IsNullOrWhiteSpace(hidden))
@@ -985,17 +1029,18 @@ namespace HGEngineGUI.Pages
             return errors;
         }
 
-        private List<string> ValidateEvolutions(List<(string method, int param, string target)> evolutions)
+        private List<string> ValidateEvolutions(List<(string method, int param, string target, int form)> evolutions)
         {
             var errors = new List<string>();
             var methods = new HashSet<string>(Data.HGParsers.EvolutionMethodMacros);
             var species = new HashSet<string>(Data.HGParsers.SpeciesMacroNames);
             for (int i = 0; i < evolutions.Count; i++)
             {
-                var (method, param, target) = evolutions[i];
+                var (method, param, target, form) = evolutions[i];
                 if (string.IsNullOrWhiteSpace(method) || !methods.Contains(method)) errors.Add($"Row {i + 1}: Unknown evolution method.");
                 if (param < 0) errors.Add($"Row {i + 1}: Param must be >= 0.");
                 if (string.IsNullOrWhiteSpace(target) || !species.Contains(target)) errors.Add($"Row {i + 1}: Unknown target species.");
+                if (form < 0 || form > 31) errors.Add($"Row {i + 1}: Form must be 0-31.");
 
                 // Method-aware checks
                 if (method == "EVO_LEVEL")
@@ -1012,6 +1057,27 @@ namespace HGEngineGUI.Pages
                 }
             }
             return errors;
+        }
+
+        private List<(string method, int param, string target, int form)> FlattenEvolutions()
+        {
+            var list = new List<(string method, int param, string target, int form)>();
+            foreach (var e in _evoModel)
+            {
+                if (e.Conditions != null && e.Conditions.Count > 0)
+                {
+                    foreach (var c in e.Conditions)
+                    {
+                        var method = (c.Method ?? string.Empty).Trim();
+                        list.Add((method, c.Param, (e.Target ?? string.Empty).Trim(), e.Form));
+                    }
+                }
+                else
+                {
+                    list.Add(((e.Method ?? string.Empty).Trim(), e.Param, (e.Target ?? string.Empty).Trim(), e.Form));
+                }
+            }
+            return list;
         }
 
         private void OnTmSearch(object sender, AutoSuggestBoxTextChangedEventArgs e)
