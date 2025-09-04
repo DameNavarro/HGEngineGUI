@@ -38,7 +38,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <ComboBox x:Name="ClassCombo" Grid.Column="0" PlaceholderText="Class"/>
+                <ComboBox x:Name="ClassCombo" Grid.Column="0" PlaceholderText="Class" IsEditable = "true"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                     <TextBox x:Name="AIFlagsBox" Width="240" PlaceholderText="AI flags"/>
                     <Button x:Name="EditAIFlagsBtn" Content="Edit" Click="OnEditAIFlags"/>
@@ -48,16 +48,16 @@
                     <ComboBoxItem Content="SINGLE_BATTLE"/>
                     <ComboBoxItem Content="DOUBLE_BATTLE"/>
                 </ComboBox>
-                <ComboBox x:Name="Item1Combo" Grid.Column="3" PlaceholderText="Item 1"/>
-                <ComboBox x:Name="Item2Combo" Grid.Column="4" PlaceholderText="Item 2"/>
+                <ComboBox x:Name="Item1Combo" Grid.Column="3" PlaceholderText="Item 1" IsEditable = "true"/>
+                <ComboBox x:Name="Item2Combo" Grid.Column="4" PlaceholderText="Item 2" IsEditable = "true"/>
             </Grid>
             <Grid ColumnSpacing="8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <ComboBox x:Name="Item3Combo" Grid.Column="0" PlaceholderText="Item 3"/>
-                <ComboBox x:Name="Item4Combo" Grid.Column="1" PlaceholderText="Item 4"/>
+                <ComboBox x:Name="Item3Combo" Grid.Column="0" PlaceholderText="Item 3" IsEditable = "true"/>
+                <ComboBox x:Name="Item4Combo" Grid.Column="1" PlaceholderText="Item 4" IsEditable = "true"/>
             </Grid>
             <CommandBar>
                 <AppBarButton Icon="PreviewLink" Label="Preview Header" Click="OnPreviewTrainerHeader"/>
