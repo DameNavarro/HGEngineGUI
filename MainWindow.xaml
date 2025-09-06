@@ -24,6 +24,8 @@
             <NavigationViewItem x:Name="PokemonItem" Content="Pokémon" Tag="Species" Icon="Contact"/>
             <NavigationViewItem x:Name="TrainersItem" Content="Trainers" Tag="Trainers" Icon="People"/>
             <NavigationViewItem x:Name="ItemsItem" Content="Items" Tag="Items" Icon="Shop"/>
+            <NavigationViewItem x:Name="MovesItem" Content="Moves" Tag="Moves" Icon="Edit"/>
+            <NavigationViewItem x:Name="TmHmItem" Content="TM/HM editor" Tag="TMHM" Icon="Library"/>
             <NavigationViewItem x:Name="ConfigItem" Content="Config" Tag="Config" Icon="Setting"/>
             <NavigationViewItem x:Name="EncountersItem" Content="Encounters" Tag="Encounters" Icon="Map"/>
             <!-- Learnsets and Evolutions will be sub-pages under Pokémon, so we remove their top-level nav items. -->

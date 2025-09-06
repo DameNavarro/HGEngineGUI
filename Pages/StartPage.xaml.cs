@@ -74,6 +74,31 @@ namespace HGEngineGUI.Pages
             }
         }
 
+        private void OnSpecies(object sender, RoutedEventArgs e)
+        {
+            (App.MainWindow as HGEngineGUI.MainWindow)?.Navigate(typeof(HGEngineGUI.Pages.SpeciesListPage));
+        }
+
+        private void OnItems(object sender, RoutedEventArgs e)
+        {
+            (App.MainWindow as HGEngineGUI.MainWindow)?.Navigate(typeof(HGEngineGUI.Pages.ItemsPage));
+        }
+
+        private void OnMoves(object sender, RoutedEventArgs e)
+        {
+            (App.MainWindow as HGEngineGUI.MainWindow)?.Navigate(typeof(HGEngineGUI.Pages.MovesPage));
+        }
+
+        private void OnEncounters(object sender, RoutedEventArgs e)
+        {
+            (App.MainWindow as HGEngineGUI.MainWindow)?.Navigate(typeof(HGEngineGUI.Pages.EncountersPage));
+        }
+
+        private void OnTrainers(object sender, RoutedEventArgs e)
+        {
+            (App.MainWindow as HGEngineGUI.MainWindow)?.Navigate(typeof(HGEngineGUI.Pages.TrainersPage));
+        }
+
         private async void OnOpenChangeClick(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.DataContext is HGEngineGUI.Services.ChangeLog.Change change)

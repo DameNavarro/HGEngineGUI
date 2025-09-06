@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="HGEngineGUI.Pages.TMHMPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:HGEngineGUI.Pages"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid RowDefinitions="Auto,Auto,*" Padding="12" RowSpacing="12">
+        <TextBlock Text="Change TM/HM move" FontSize="20" FontWeight="SemiBold"/>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12">
+            <ComboBox x:Name="TmSelector" Width="280" PlaceholderText="Select TM/HM" IsEditable="False" SelectionChanged="OnTmChanged"/>
+            <ComboBox x:Name="MoveSelector" Width="380" PlaceholderText="Select Move (MOVE_*)" IsEditable="False" SelectionChanged="OnMoveChanged"/>
+            <TextBlock x:Name="MoveMeta" Foreground="LightGray" VerticalAlignment="Center"/>
+            <Button x:Name="PreviewButton" Content="Preview" Click="OnPreview"/>
+            <Button x:Name="SaveButton" Content="Save" Click="OnSave"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Spacing="12">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Current TM/HM header" FontWeight="SemiBold"/>
+                <TextBox x:Name="CurrentHeader" IsReadOnly="True" TextWrapping="Wrap"/>
+            </StackPanel>
+            <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Species that can learn this TM/HM" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="SpeciesCount" Foreground="LightGray"/>
+                </StackPanel>
+                <ListView x:Name="SpeciesList" Height="400"/>
+            </StackPanel>
+            <StackPanel Spacing="8" x:Name="PreviewPanel" Visibility="Collapsed">
+                <TextBlock Text="Preview" FontWeight="SemiBold"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Height="400">
+                    <TextBlock x:Name="PreviewText" FontFamily="Consolas" TextWrapping="NoWrap"/>
+                </ScrollViewer>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Page>
+
+

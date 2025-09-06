@@ -102,7 +102,7 @@ namespace HGEngineGUI.Data
             {
                 if (string.IsNullOrWhiteSpace(e.ItemMacro)) continue;
                 // Match one item block by macro, tolerant of index arithmetic (e.g., - NUM_UNKNOWN_SLOTS)
-                var blockRx = new System.Text.RegularExpressions.Regex("\\[\\s*" + System.Text.RegularExpressions.Regex.Escape(e.ItemMacro) + @"(?:\\s*-\\s*NUM_UNKNOWN_SLOTS(?:_EXPLORER_KIT)?)?\\s*\\]\\s*=\\s*\\{(?<body>[\\s\\S]*?)\\}", System.Text.RegularExpressions.RegexOptions.Multiline);
+                var blockRx = new System.Text.RegularExpressions.Regex(@"\[\s*" + System.Text.RegularExpressions.Regex.Escape(e.ItemMacro) + @"(?:\s*-\s*NUM_UNKNOWN_SLOTS(?:_EXPLORER_KIT)?)?\s*\]\s*=\s*\{(?<body>[\s\S]*?)\},?", System.Text.RegularExpressions.RegexOptions.Multiline);
                 var m = blockRx.Match(normalized);
                 if (!m.Success) continue;
                 int start = m.Index;
@@ -127,33 +127,52 @@ namespace HGEngineGUI.Data
                 newBody = ReplaceAssignment(newBody, "battleUseFunc", e.BattleUseFunc);
                 newBody = ReplaceAssignment(newBody, "partyUse", e.PartyUse);
 
-                // Update nested partyUseParam block
-                var partyRx = new System.Text.RegularExpressions.Regex(@"\.partyUseParam\s*=\s*\{(?<p>[\s\S]*?)\}", System.Text.RegularExpressions.RegexOptions.Multiline);
-                var pm = partyRx.Match(newBody);
-                if (pm.Success)
+                // Replace the entire partyUseParam block with a fresh one
+                // Remove ALL existing partyUseParam blocks (handles accidental nested duplicates)
+                while (true)
                 {
-                    string pbody = pm.Groups["p"].Value;
-                    foreach (var kv in e.PartyFlags)
+                    int partyStart = newBody.IndexOf(".partyUseParam", StringComparison.Ordinal);
+                    if (partyStart < 0) break;
+
+                    // Find the first '{' after the declaration
+                    int braceOpen = newBody.IndexOf('{', partyStart);
+                    if (braceOpen < 0) { break; }
+
+                    int depth = 1;
+                    int i = braceOpen + 1;
+                    for (; i < newBody.Length; i++)
                     {
-                        pbody = ReplaceAssignment(pbody, kv.Key, kv.Value);
+                        char ch = newBody[i];
+                        if (ch == '{') depth++;
+                        else if (ch == '}')
+                        {
+                            depth--;
+                            if (depth == 0) { i++; break; }
+                        }
                     }
-                    foreach (var kv in e.PartyParams)
-                    {
-                        pbody = ReplaceAssignment(pbody, kv.Key, kv.Value);
-                    }
-                    // splice back
-                    newBody = newBody.Substring(0, pm.Groups["p"].Index) + pbody + newBody.Substring(pm.Groups["p"].Index + pm.Groups["p"].Length);
+                    int endPos = i;
+                    // Consume trailing comma and whitespace
+                    while (endPos < newBody.Length && (char.IsWhiteSpace(newBody[endPos]) || newBody[endPos] == ',')) endPos++;
+
+                    // Remove this block
+                    newBody = newBody.Remove(partyStart, Math.Max(0, endPos - partyStart));
                 }
-                else if ((e.PartyFlags.Count + e.PartyParams.Count) > 0)
+
+                // Generate a fresh partyUseParam block if we have flags/params
+                if (e.PartyFlags.Count + e.PartyParams.Count > 0)
                 {
-                    // Insert minimal partyUseParam block before closing brace
-                    var sb = new System.Text.StringBuilder();
-                    sb.Append("\n        .partyUseParam = {\n");
-                    foreach (var kv in e.PartyFlags) sb.Append($"            .{kv.Key} = {kv.Value},\n");
-                    foreach (var kv in e.PartyParams) sb.Append($"            .{kv.Key} = {kv.Value},\n");
-                    sb.Append("        },\n");
-                    // inject at end of body
+                    // Ensure consistent spacing: no extra blank lines before the block
                     newBody = newBody.TrimEnd();
+
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("\n    .partyUseParam = {\n");
+                    foreach (var kv in e.PartyFlags.OrderBy(k => k.Key))
+                        sb.Append($"        .{kv.Key} = {kv.Value},\n");
+                    foreach (var kv in e.PartyParams.OrderBy(k => k.Key))
+                        sb.Append($"        .{kv.Key} = {kv.Value},\n");
+                    sb.Append("    },\n");
+
+                    // Append to the end of the item body
                     newBody += sb.ToString();
                 }
 
@@ -161,6 +180,20 @@ namespace HGEngineGUI.Data
                 string newBlock = fullBlock.Replace(m.Groups["body"].Value, newBody);
                 // Replace in the full text
                 normalized = normalized.Substring(0, start) + newBlock + normalized.Substring(start + length);
+
+                // Cleanup: remove any stray repeated closing braces right after this item block
+                int cursor = start + newBlock.Length;
+                int j = cursor;
+                while (j < normalized.Length && char.IsWhiteSpace(normalized[j])) j++;
+                if (j < normalized.Length && normalized[j] == '}')
+                {
+                    int k = j;
+                    while (k < normalized.Length && (normalized[k] == '}' || normalized[k] == ',' || char.IsWhiteSpace(normalized[k]))) k++;
+                    if (k < normalized.Length && normalized[k] == '[')
+                    {
+                        normalized = normalized.Remove(j, k - j);
+                    }
+                }
             }
 
             string result = hadCrLf ? normalized.Replace("\n", "\r\n") : normalized;
@@ -175,11 +208,8 @@ namespace HGEngineGUI.Data
             {
                 return rx.Replace(body, m => m.Groups[1].Value + value, 1);
             }
-            // If field not found, append it near end (best-effort)
-            int insertPos = body.LastIndexOf('}');
-            if (insertPos < 0) insertPos = body.Length;
-            var line = "\n        ." + field + " = " + value + ",\n";
-            return body.Insert(insertPos, line);
+            // If field not found in partyUseParam block, don't add it (only update existing fields)
+            return body;
         }
 
         // Preview/save item names and descriptions in data/text/222.txt and 221.txt
@@ -883,6 +913,120 @@ namespace HGEngineGUI.Data
             try { System.IO.File.Copy(path, backup, true); } catch { }
             await System.IO.File.WriteAllTextAsync(path, updated);
             HGEngineGUI.Services.ChangeLog.Record(path, updated.Length);
+        }
+
+        // Preview updated armips/data/moves.s with the provided entries.
+        public static async Task<string> PreviewMoveDataAsync(List<HGParsers.MoveEntry> entries)
+        {
+            var path = HGParsers.PathMoves ?? System.IO.Path.Combine(ProjectContext.RootPath!, "armips", "data", "moves.s");
+            var original = await System.IO.File.ReadAllTextAsync(path);
+            var text = original.Replace("\r\n", "\n");
+
+            // We will replace each move block independently to minimize unrelated diffs.
+            foreach (var e in entries)
+            {
+                text = ReplaceSingleMoveBlock(text, e);
+            }
+
+            return text;
+        }
+
+        public static async Task SaveMoveDataAsync(List<HGParsers.MoveEntry> entries)
+        {
+            var preview = await PreviewMoveDataAsync(entries);
+            var path = HGParsers.PathMoves ?? System.IO.Path.Combine(ProjectContext.RootPath!, "armips", "data", "moves.s");
+            await System.IO.File.WriteAllTextAsync(path, preview.Replace("\n", "\r\n"));
+        }
+
+        private static string ReplaceSingleMoveBlock(string text, HGParsers.MoveEntry e)
+        {
+            text = text.Replace("\r\n", "\n");
+            var headerRx = new System.Text.RegularExpressions.Regex("^movedata\\s+" + System.Text.RegularExpressions.Regex.Escape(e.MoveMacro) + "\\s*,\\s\"(?<name>[^\"]*)\"", System.Text.RegularExpressions.RegexOptions.Multiline);
+            var m = headerRx.Match(text);
+            if (!m.Success) return text; // not found
+
+            int blockStart = m.Index;
+            // Find terminatedata for this block
+            var termRx = new System.Text.RegularExpressions.Regex("^\\s*terminatedata\\s*$", System.Text.RegularExpressions.RegexOptions.Multiline);
+            var term = termRx.Match(text, blockStart);
+            if (!term.Success) return text;
+
+            // Also find the movedescription immediately after terminatedata
+            int afterTerm = term.Index;
+            var descRx = new System.Text.RegularExpressions.Regex("^\\s*movedescription\\s+" + System.Text.RegularExpressions.Regex.Escape(e.MoveMacro) + "\\s*,\\s\"(?<d>[^\"]*)\"", System.Text.RegularExpressions.RegexOptions.Multiline);
+            var desc = descRx.Match(text, afterTerm);
+
+            int blockEnd = term.Index + term.Length; // end of core block
+            int descEnd = desc.Success ? (desc.Index + desc.Length) : blockEnd;
+
+            string originalBlock = text.Substring(blockStart, blockEnd - blockStart);
+            string newBlock = BuildMoveBlock(originalBlock, e);
+
+            string originalDesc = desc.Success ? text.Substring(desc.Index, desc.Length) : string.Empty;
+            string newDesc = $"movedescription {e.MoveMacro}, \"{e.Description}\"";
+
+            // Replace in text
+            var sb = new System.Text.StringBuilder();
+            sb.Append(text.Substring(0, blockStart));
+            sb.Append(newBlock);
+            if (desc.Success)
+            {
+                sb.Append(text.Substring(blockEnd, desc.Index - blockEnd));
+                sb.Append(newDesc);
+                sb.Append(text.Substring(desc.Index + desc.Length));
+            }
+            else
+            {
+                sb.Append(text.Substring(blockEnd));
+            }
+            return sb.ToString();
+        }
+
+        private static string BuildMoveBlock(string originalBlock, HGParsers.MoveEntry e)
+        {
+            // Keep leading whitespace and formatting by editing lines via regex replaces.
+            string block = originalBlock;
+            // Header name
+            block = System.Text.RegularExpressions.Regex.Replace(block,
+                "^(movedata\\s+" + System.Text.RegularExpressions.Regex.Escape(e.MoveMacro) + ",)\\s*\"[^\"]*\"",
+                $"$1 \"{e.Name}\"",
+                System.Text.RegularExpressions.RegexOptions.Multiline);
+
+            string ReplaceLine(string key, string valuePattern)
+            {
+                var rx = new System.Text.RegularExpressions.Regex($"^(\\s*{key}\\s+).*$", System.Text.RegularExpressions.RegexOptions.Multiline);
+                if (rx.IsMatch(block))
+                {
+                    // Use a MatchEvaluator to avoid $1 ambiguity like "$1100" being read as group 1100
+                    block = rx.Replace(block, m => m.Groups[1].Value + valuePattern);
+                }
+                else
+                {
+                    block += $"\n    {key} {valuePattern}\n"; // best-effort append inside block
+                }
+                return block;
+            }
+
+            block = ReplaceLine("battleeffect", e.EffectMacro);
+            block = ReplaceLine("pss", e.SplitMacro);
+            block = ReplaceLine("basepower", e.BasePower.ToString());
+            block = ReplaceLine("type", e.TypeMacro);
+            block = ReplaceLine("accuracy", e.Accuracy.ToString());
+            block = ReplaceLine("pp", e.PP.ToString());
+            block = ReplaceLine("effectchance", e.SecondaryEffectChance.ToString());
+            block = ReplaceLine("target", e.TargetMacro);
+            block = ReplaceLine("priority", e.Priority.ToString());
+            // Flags: rebuild from macros if present, else keep original
+            string flagsExpr = e.FlagMacros != null && e.FlagMacros.Count > 0
+                ? string.Join(" | ", e.FlagMacros)
+                : (string.IsNullOrWhiteSpace(e.FlagsRaw) ? "0x00" : e.FlagsRaw);
+            block = ReplaceLine("flags", flagsExpr);
+            // Appeal is written in hex (e.g., 0x05) in the source file; preserve that style
+            string appealText = e.Appeal <= 0xFF ? $"0x{e.Appeal:X2}" : e.Appeal.ToString();
+            block = ReplaceLine("appeal", appealText);
+            block = ReplaceLine("contesttype", e.ContestTypeMacro);
+
+            return block;
         }
 
         private static string ReplaceEncounterBlock(string text, HGParsers.EncounterArea area)

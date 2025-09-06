@@ -65,6 +65,12 @@ namespace HGEngineGUI
                     case "Items":
                         ContentFrame.Navigate(typeof(Pages.ItemsPage));
                         break;
+                    case "Moves":
+                        ContentFrame.Navigate(typeof(Pages.MovesPage));
+                        break;
+                    case "TMHM":
+                        ContentFrame.Navigate(typeof(Pages.TMHMPage));
+                        break;
                     case "Encounters":
                         ContentFrame.Navigate(typeof(Pages.EncountersPage));
                         break;
@@ -84,6 +90,20 @@ namespace HGEngineGUI
                 StatusProject.Text = ProjectContext.RootPath ?? "(no project)";
                 StatusMessage.Text = message;
                 StatusTiming.Text = timing;
+            }
+            catch { }
+        }
+
+        // Public navigation helper so pages (e.g., StartPage) can request navigation
+        public void Navigate(Type pageType)
+        {
+            try
+            {
+                if (pageType != null)
+                {
+                    ContentFrame.Navigate(pageType);
+                    UpdateStatus($"Navigated: {pageType.Name}");
+                }
             }
             catch { }
         }

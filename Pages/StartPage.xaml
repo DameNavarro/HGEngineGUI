@@ -19,7 +19,16 @@
         </StackPanel>
 
         <Border Grid.Row="2" Margin="0,16,0,0" Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-            <TextBlock Text="Use the navigation bar to open editors once a project is selected."/>
+            <StackPanel Spacing="8">
+                <TextBlock Text="Open an editor:"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Species" Click="OnSpecies"/>
+                    <Button Content="Items" Click="OnItems"/>
+                    <Button Content="Moves" Click="OnMoves"/>
+                    <Button Content="Encounters" Click="OnEncounters"/>
+                    <Button Content="Trainers" Click="OnTrainers"/>
+                </StackPanel>
+            </StackPanel>
         </Border>
 
         <TextBlock Grid.Row="3" Foreground="Gray" Margin="0,16,0,0" Text="This is a work-in-progress build. Read-only parsing is enabled for Species constants."/>

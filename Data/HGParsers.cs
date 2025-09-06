@@ -33,6 +33,29 @@ namespace HGEngineGUI.Data
         public static bool TryGetTypeMacro(int value, out string macro) => _typeIdToMacro.TryGetValue(value, out macro!);
         public static IReadOnlyList<string> AbilityMacros => _abilityMacros;
         private static List<string> _abilityMacros = new();
+        // Move-related macro caches
+        public static IReadOnlyList<string> MoveEffectMacros => _moveEffectMacros;
+        private static List<string> _moveEffectMacros = new();
+        private static Dictionary<string, int> _moveEffectValues = new(StringComparer.Ordinal);
+        private static Dictionary<int, string> _moveEffectIdToMacro = new();
+        public static bool TryGetMoveEffectValue(string macro, out int value) => _moveEffectValues.TryGetValue(macro, out value);
+        public static bool TryGetMoveEffectMacro(int value, out string macro) => _moveEffectIdToMacro.TryGetValue(value, out macro!);
+        public static IReadOnlyList<string> MoveTargetMacros => _moveTargetMacros;
+        private static List<string> _moveTargetMacros = new();
+        private static Dictionary<string, string> _moveTargetExpressions = new(StringComparer.Ordinal); // e.g., "(1 << 0)"
+        public static bool TryGetMoveTargetExpression(string macro, out string expr) => _moveTargetExpressions.TryGetValue(macro, out expr!);
+        public static IReadOnlyList<string> MoveFlagMacros => _moveFlagMacros;
+        private static List<string> _moveFlagMacros = new();
+        private static Dictionary<string, int> _moveFlagValues = new(StringComparer.Ordinal); // bit mask (0-255)
+        public static bool TryGetMoveFlagValue(string macro, out int value) => _moveFlagValues.TryGetValue(macro, out value);
+        public static IReadOnlyList<string> MoveSplitMacros => _moveSplitMacros;
+        private static List<string> _moveSplitMacros = new();
+        private static Dictionary<string, int> _moveSplitValues = new(StringComparer.Ordinal);
+        public static bool TryGetMoveSplitValue(string macro, out int value) => _moveSplitValues.TryGetValue(macro, out value);
+        public static IReadOnlyList<string> ContestTypeMacros => _contestTypeMacros;
+        private static List<string> _contestTypeMacros = new();
+        private static Dictionary<string, int> _contestTypeValues = new(StringComparer.Ordinal);
+        public static bool TryGetContestTypeValue(string macro, out int value) => _contestTypeValues.TryGetValue(macro, out value);
         // Item-related macro lists for dropdowns
         public static IReadOnlyList<string> HoldEffectMacros => _holdEffectMacros;
         private static List<string> _holdEffectMacros = new();
@@ -40,6 +63,12 @@ namespace HGEngineGUI.Data
         private static List<string> _pocketMacros = new();
         public static IReadOnlyList<string> BattlePocketMacros => _battlePocketMacros;
         private static List<string> _battlePocketMacros = new();
+        // Item use function labels parsed from src/item.c sItemFieldUseFuncs[]
+        public static IReadOnlyList<string> UseFunctionLabels => _useFunctionLabels;
+        private static List<string> _useFunctionLabels = new();
+        // Display labels augmented with (unused)
+        public static IReadOnlyList<string> UseFunctionDisplayLabels => _useFunctionDisplayLabels;
+        private static List<string> _useFunctionDisplayLabels = new();
         public static IReadOnlyList<string> EggGroupMacros => _eggGroupMacros;
         private static List<string> _eggGroupMacros = new();
         public static IReadOnlyList<string> GrowthRateMacros => _growthRateMacros;
@@ -355,6 +384,29 @@ namespace HGEngineGUI.Data
         public static bool TryGetMoveValue(string macro, out int value) => _moveValues.TryGetValue(macro, out value);
         public static bool TryGetItemMacro(int value, out string macro) => _itemIdToMacro.TryGetValue(value, out macro!);
         public static bool TryGetMoveMacro(int value, out string macro) => _moveIdToMacro.TryGetValue(value, out macro!);
+        // Move data parsed entries
+        public class MoveEntry
+        {
+            public string MoveMacro { get; set; } = string.Empty;
+            public int MoveId { get; set; }
+            public string Name { get; set; } = string.Empty;
+            public string Description { get; set; } = string.Empty;
+            public string EffectMacro { get; set; } = string.Empty; // MOVE_EFFECT_*
+            public string SplitMacro { get; set; } = string.Empty;  // SPLIT_*
+            public int BasePower { get; set; }
+            public string TypeMacro { get; set; } = string.Empty;   // TYPE_*
+            public int Accuracy { get; set; }
+            public int PP { get; set; }
+            public int SecondaryEffectChance { get; set; }
+            public string TargetMacro { get; set; } = string.Empty; // RANGE_*
+            public int Priority { get; set; }
+            public List<string> FlagMacros { get; set; } = new();   // FLAG_* list
+            public string FlagsRaw { get; set; } = string.Empty;    // original expression (e.g., FLAG_A | FLAG_B)
+            public int Appeal { get; set; }                         // numeric appeal
+            public string ContestTypeMacro { get; set; } = string.Empty; // CONTEST_*
+        }
+        public static IReadOnlyList<MoveEntry> Moves => _moves;
+        private static List<MoveEntry> _moves = new();
         // Items and prices
         public static IReadOnlyList<(string ItemMacro, int Price)> ItemsWithPrices => _itemsWithPrices;
         private static List<(string ItemMacro, int Price)> _itemsWithPrices = new();
@@ -747,6 +799,103 @@ namespace HGEngineGUI.Data
                 }
             }
 
+            // Move effects (MOVE_EFFECT_*) from asm/include/move_effects.inc
+            _moveEffectMacros = new();
+            _moveEffectValues = new(StringComparer.Ordinal);
+            _moveEffectIdToMacro = new();
+            try
+            {
+                var moveEffectsInc = Path.Combine(ProjectContext.RootPath, "asm", "include", "move_effects.inc");
+                if (File.Exists(moveEffectsInc))
+                {
+                    foreach (var raw in await File.ReadAllLinesAsync(moveEffectsInc))
+                    {
+                        var line = raw.Trim();
+                        var m = Regex.Match(line, @"^\.equ\s+(MOVE_EFFECT_[A-Z0-9_]+)\s*,\s*(\d+)");
+                        if (!m.Success) continue;
+                        var name = m.Groups[1].Value;
+                        if (int.TryParse(m.Groups[2].Value, out var val))
+                        {
+                            _moveEffectMacros.Add(name);
+                            _moveEffectValues[name] = val;
+                            _moveEffectIdToMacro[val] = name;
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            // Move splits, contest types, targets, flags from armips/include/movemacros.s
+            _moveSplitMacros = new();
+            _moveSplitValues = new(StringComparer.Ordinal);
+            _contestTypeMacros = new();
+            _contestTypeValues = new(StringComparer.Ordinal);
+            _moveTargetMacros = new();
+            _moveTargetExpressions = new(StringComparer.Ordinal);
+            _moveFlagMacros = new();
+            _moveFlagValues = new(StringComparer.Ordinal);
+            try
+            {
+                var moveMacrosAsm = Path.Combine(ProjectContext.RootPath, "armips", "include", "movemacros.s");
+                if (File.Exists(moveMacrosAsm))
+                {
+                    foreach (var raw in await File.ReadAllLinesAsync(moveMacrosAsm))
+                    {
+                        var line = raw.Trim();
+                        // Splits: SPLIT_* equ <num>
+                        var ms = Regex.Match(line, @"^(SPLIT_[A-Z0-9_]+)\s+equ\s+(\d+)");
+                        if (ms.Success)
+                        {
+                            var name = ms.Groups[1].Value;
+                            if (int.TryParse(ms.Groups[2].Value, out var v))
+                            {
+                                if (!_moveSplitMacros.Contains(name)) _moveSplitMacros.Add(name);
+                                _moveSplitValues[name] = v;
+                            }
+                            continue;
+                        }
+                        // Contest types: CONTEST_* equ <num>
+                        var mc = Regex.Match(line, @"^(CONTEST_[A-Z0-9_]+)\s+equ\s+(\d+)");
+                        if (mc.Success)
+                        {
+                            var name = mc.Groups[1].Value;
+                            if (int.TryParse(mc.Groups[2].Value, out var v))
+                            {
+                                if (!_contestTypeMacros.Contains(name)) _contestTypeMacros.Add(name);
+                                _contestTypeValues[name] = v;
+                            }
+                            continue;
+                        }
+                        // Targets: .equ RANGE_*, <expr>
+                        var mt = Regex.Match(line, @"^\.equ\s+(RANGE_[A-Z0-9_]+)\s*,\s*(?<expr>.+)$");
+                        if (mt.Success)
+                        {
+                            var name = mt.Groups[1].Value;
+                            var expr = mt.Groups["expr"].Value.Trim();
+                            if (!_moveTargetMacros.Contains(name)) _moveTargetMacros.Add(name);
+                            _moveTargetExpressions[name] = expr;
+                            continue;
+                        }
+                        // Flags: FLAG_* equ <hex|dec>
+                        var mf = Regex.Match(line, @"^(FLAG_[A-Z0-9_]+)\s+equ\s+(0x[0-9A-Fa-f]+|\d+)");
+                        if (mf.Success)
+                        {
+                            var name = mf.Groups[1].Value;
+                            var valStr = mf.Groups[2].Value;
+                            int v = 0;
+                            if (valStr.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                                int.TryParse(valStr.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out v);
+                            else
+                                int.TryParse(valStr, out v);
+                            if (!_moveFlagMacros.Contains(name)) _moveFlagMacros.Add(name);
+                            _moveFlagValues[name] = v;
+                            continue;
+                        }
+                    }
+                }
+            }
+            catch { }
+
             // egg groups: may not exist; fallback to common set if header is missing
             _eggGroupMacros = new();
             var eggHeader = Path.Combine(ProjectContext.RootPath, "include", "constants", "egg_groups.h");
@@ -1005,7 +1154,10 @@ namespace HGEngineGUI.Data
                             {
                                 string n = m.Groups["name"].Value;
                                 string v = m.Groups["value"].Value.Trim();
-                                if (n.EndsWith("_param", StringComparison.Ordinal)) entry.PartyParams[n] = v; else entry.PartyFlags[n] = v;
+                                if (n.EndsWith("_param", StringComparison.Ordinal) || n.EndsWith("_stages", StringComparison.Ordinal))
+                                    entry.PartyParams[n] = v; // treat numeric stage fields like params
+                                else
+                                    entry.PartyFlags[n] = v; // TRUE/FALSE switches
                             }
                         }
 
@@ -1046,6 +1198,25 @@ namespace HGEngineGUI.Data
                             if (idx < descLines.Count) e.Description = descLines[idx];
                         }
                     }
+                }
+            }
+            catch { }
+
+            // Build display labels for use funcs with (unused) suffix where appropriate
+            try
+            {
+                var used = new HashSet<int>();
+                foreach (var e in _itemsData)
+                {
+                    if (int.TryParse(e.FieldUseFunc, out var fu)) used.Add(fu);
+                    if (int.TryParse(e.BattleUseFunc, out var bu)) used.Add(bu);
+                }
+                _useFunctionDisplayLabels = new List<string>();
+                for (int i = 0; i < _useFunctionLabels.Count; i++)
+                {
+                    var label = _useFunctionLabels[i];
+                    if (!used.Contains(i)) label += " (unused)";
+                    _useFunctionDisplayLabels.Add(label);
                 }
             }
             catch { }
@@ -1460,6 +1631,7 @@ namespace HGEngineGUI.Data
         public static string? PathTm { get; private set; }
         public static string? PathMondata { get; private set; }
         public static string? PathTrainers { get; private set; }
+        public static string? PathMoves { get; private set; }
 
         private static void ResolveDataPaths()
         {
@@ -1486,11 +1658,48 @@ namespace HGEngineGUI.Data
                 ?? FindFile("itemdata.c");
             PathMartItems = PreferExisting(Path.Combine(ProjectContext.RootPath, "armips", "asm", "custom", "mart_items.s"))
                 ?? FindFile("mart_items.s");
+            PathMoves = PreferExisting(Path.Combine(ProjectContext.RootPath, "armips", "data", "moves.s"))
+                ?? FindFile("moves.s");
             // Item names/descriptions text banks (222.txt names, 221.txt descriptions)
             PathItemNames = PreferExisting(Path.Combine(ProjectContext.RootPath, "data", "text", "222.txt"))
                 ?? FindFile("222.txt");
             PathItemDescriptions = PreferExisting(Path.Combine(ProjectContext.RootPath, "data", "text", "221.txt"))
                 ?? FindFile("221.txt");
+            // Parse item use function table labels from src/item.c if available
+            try
+            {
+                _useFunctionLabels = new();
+                var itemSrc = Path.Combine(ProjectContext.RootPath, "src", "item.c");
+                if (File.Exists(itemSrc))
+                {
+                    var content = File.ReadAllText(itemSrc).Replace("\r\n", "\n");
+                    var idx = content.IndexOf("sItemFieldUseFuncs[]", StringComparison.Ordinal);
+                    if (idx >= 0)
+                    {
+                        int open = content.IndexOf('{', idx);
+                        int close = content.IndexOf("};", open, StringComparison.Ordinal);
+                        if (open > 0 && close > open)
+                        {
+                            var block = content.Substring(open + 1, close - open - 1);
+                            var lines = block.Split('\n');
+                            int i = 0;
+                            foreach (var raw in lines)
+                            {
+                                var line = raw.Trim();
+                                if (!line.StartsWith("{")) continue;
+                                var payload = line.Trim('{', '}', ',', ' ');
+                                var parts = payload.Split(',');
+                                string menu = parts.Length > 0 ? parts[0].Trim() : "NULL";
+                                string field = parts.Length > 1 ? parts[1].Trim() : "NULL";
+                                string check = parts.Length > 2 ? parts[2].Trim() : "NULL";
+                                _useFunctionLabels.Add($"{i}: menu={menu}, field={field}, check={check}");
+                                i++;
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
         }
 
         private static string? PreferExisting(string path)
@@ -1511,6 +1720,299 @@ namespace HGEngineGUI.Data
             }
             catch { }
             return null;
+        }
+
+        // Parse armips/data/moves.s into MoveEntry records
+        public static async Task RefreshMovesAsync()
+        {
+            _moves = new();
+            if (ProjectContext.RootPath == null) return;
+            var path = PathMoves ?? Path.Combine(ProjectContext.RootPath, "armips", "data", "moves.s");
+            if (!File.Exists(path)) return;
+
+            var text = await File.ReadAllTextAsync(path);
+            text = text.Replace("\r\n", "\n");
+
+            var headerRx = new Regex("^movedata\\s+(?<macro>MOVE_[A-Z0-9_]+)\\s*,\\s\"(?<name>[^\"]*)\"", RegexOptions.Multiline);
+            var termRx = new Regex("^\\s*terminatedata\\s*$", RegexOptions.Multiline);
+
+            var matches = headerRx.Matches(text);
+            for (int i = 0; i < matches.Count; i++)
+            {
+                var hm = matches[i];
+                int startIdx = hm.Index;
+                int searchEnd = (i + 1 < matches.Count) ? matches[i + 1].Index : text.Length;
+                var termMatch = termRx.Match(text, startIdx);
+                if (!termMatch.Success || termMatch.Index > searchEnd) continue; // malformed, skip
+
+                string moveMacro = hm.Groups["macro"].Value.Trim();
+                string name = hm.Groups["name"].Value;
+
+                // Body between header and terminatedata
+                string body = text.Substring(hm.Index, termMatch.Index - hm.Index);
+
+                // Description line after terminatedata, expect movedescription MOVE_*, "..."
+                string desc = string.Empty;
+                {
+                    int afterTerm = termMatch.Index;
+                    var descRx = new Regex("^\\s*movedescription\\s+" + Regex.Escape(moveMacro) + "\\s*,\\s\"(?<d>[^\"]*)\"", RegexOptions.Multiline);
+                    var dm = descRx.Match(text, afterTerm);
+                    if (dm.Success && dm.Index < searchEnd)
+                    {
+                        desc = dm.Groups["d"].Value;
+                    }
+                }
+
+                MoveEntry entry = new()
+                {
+                    MoveMacro = moveMacro,
+                    Name = name,
+                    Description = desc,
+                };
+                if (_moveValues.TryGetValue(moveMacro, out var mid)) entry.MoveId = mid;
+
+                // Field helpers
+                int ReadInt(string pattern)
+                {
+                    var m = Regex.Match(body, pattern, RegexOptions.Multiline);
+                    if (!m.Success) return 0;
+                    var v = m.Groups["v"].Value.Trim();
+                    if (v.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (int.TryParse(v.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out var hv)) return hv;
+                        return 0;
+                    }
+                    int.TryParse(v, out var dv);
+                    return dv;
+                }
+
+                string ReadToken(string pattern)
+                {
+                    var m = Regex.Match(body, pattern, RegexOptions.Multiline);
+                    return m.Success ? m.Groups["v"].Value.Trim() : string.Empty;
+                }
+
+                // Parse fields
+                entry.EffectMacro = ReadToken(@"battleeffect\s+(?<v>[A-Z0-9_]+)");
+                entry.SplitMacro = ReadToken(@"pss\s+(?<v>SPLIT_[A-Z0-9_]+)");
+                entry.BasePower = ReadInt(@"basepower\s+(?<v>0x[0-9A-Fa-f]+|-?\d+)");
+                entry.TypeMacro = ReadToken(@"type\s+(?<v>TYPE_[A-Z0-9_]+)");
+                entry.Accuracy = ReadInt(@"accuracy\s+(?<v>0x[0-9A-Fa-f]+|-?\d+)");
+                entry.PP = ReadInt(@"pp\s+(?<v>0x[0-9A-Fa-f]+|-?\d+)");
+                entry.SecondaryEffectChance = ReadInt(@"effectchance\s+(?<v>0x[0-9A-Fa-f]+|-?\d+)");
+                entry.TargetMacro = ReadToken(@"target\s+(?<v>RANGE_[A-Z0-9_]+)");
+                entry.Priority = ReadInt(@"priority\s+(?<v>-?\d+)");
+                // flags: capture raw, then split macros
+                {
+                    var fm = Regex.Match(body, @"flags\s+(?<v>.+)", RegexOptions.Multiline);
+                    if (fm.Success)
+                    {
+                        var raw = fm.Groups["v"].Value.Trim();
+                        entry.FlagsRaw = raw;
+                        var parts = raw.Split('|').Select(p => p.Trim());
+                        foreach (var p in parts)
+                        {
+                            if (p.StartsWith("FLAG_", StringComparison.Ordinal) && !entry.FlagMacros.Contains(p)) entry.FlagMacros.Add(p);
+                        }
+                    }
+                }
+                entry.Appeal = ReadInt(@"appeal\s+(?<v>0x[0-9A-Fa-f]+|\d+)");
+                entry.ContestTypeMacro = ReadToken(@"contesttype\s+(?<v>CONTEST_[A-Z0-9_]+)");
+
+                _moves.Add(entry);
+            }
+        }
+
+        // Robust reader for party flags for a specific item from data/itemdata/itemdata.c
+        // Uses brace matching and strips comments to tolerate formatting variants
+        public static Dictionary<string,string> TryReadPartyFlagsFromItemDataFile(string itemMacro)
+        {
+            var result = new Dictionary<string, string>(StringComparer.Ordinal);
+            try
+            {
+                if (string.IsNullOrWhiteSpace(itemMacro)) return result;
+                var path = PathItemData ?? (ProjectContext.RootPath == null ? null : Path.Combine(ProjectContext.RootPath, "data", "itemdata", "itemdata.c"));
+                if (path == null || !File.Exists(path)) return result;
+
+                var original = File.ReadAllText(path);
+                var text = original.Replace("\r\n", "\n");
+
+                // Find the item header start
+                var headerRx = new Regex(@"\[\s*" + Regex.Escape(itemMacro) + @"(?:\s*-\s*NUM_UNKNOWN_SLOTS(?:_EXPLORER_KIT)?)?\s*\]\s*=\s*\{", RegexOptions.Multiline);
+                var hm = headerRx.Match(text);
+                if (!hm.Success) return result;
+
+                int openIdx = text.IndexOf('{', hm.Index);
+                if (openIdx < 0) return result;
+
+                string itemBody = ExtractBalancedBlock(text, openIdx);
+                if (string.IsNullOrEmpty(itemBody)) return result;
+
+                // Search for .partyUseParam = { ... } within the item body
+                var pupIdx = itemBody.IndexOf(".partyUseParam", StringComparison.Ordinal);
+                if (pupIdx < 0) return result;
+
+                int eqIdx = itemBody.IndexOf('=', pupIdx);
+                if (eqIdx < 0) return result;
+                int braceIdx = itemBody.IndexOf('{', eqIdx);
+                if (braceIdx < 0) return result;
+
+                // Extract inner param block with braces
+                string paramBody = ExtractBalancedBlock(itemBody, braceIdx);
+                if (string.IsNullOrEmpty(paramBody)) return result;
+
+                // Strip comments for consistent parsing
+                string cleaned = StripComments(paramBody);
+
+                // Parse assignments like .flag = VALUE
+                var assign = new Regex(@"\.(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?<val>[A-Za-z0-9_]+)", RegexOptions.Multiline);
+                foreach (Match m in assign.Matches(cleaned))
+                {
+                    string name = m.Groups["name"].Value;
+                    string val = m.Groups["val"].Value.Trim();
+                    // Only capture non-parameter flags (leave _param/_stages as numeric params)
+                    if (name.EndsWith("_param", StringComparison.Ordinal) || name.EndsWith("_stages", StringComparison.Ordinal))
+                        continue;
+                    result[name] = val;
+                }
+            }
+            catch { }
+            return result;
+        }
+
+        // Remove // line comments and /* */ block comments while preserving newlines
+        private static string StripComments(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return s;
+            // Remove block comments but preserve newline count
+            string withoutBlock = Regex.Replace(s, @"/\*[\s\S]*?\*/", match => new string('\n', match.Value.Count(c => c == '\n')));
+            // Remove line comments
+            string withoutLine = Regex.Replace(withoutBlock, @"//.*", string.Empty);
+            return withoutLine;
+        }
+
+        // Given an index of an opening '{' in text, return the substring inside the balanced block
+        private static string ExtractBalancedBlock(string text, int openBraceIndex)
+        {
+            if (openBraceIndex < 0 || openBraceIndex >= text.Length || text[openBraceIndex] != '{') return string.Empty;
+            int depth = 1;
+            int i = openBraceIndex + 1;
+            for (; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (c == '{') depth++;
+                else if (c == '}')
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        return text.Substring(openBraceIndex + 1, i - openBraceIndex - 1);
+                    }
+                }
+            }
+            return string.Empty;
+        }
+
+        // Find references/usages of a given MOVE_* macro across key data files
+        public static async Task<List<string>> FindMoveUsagesAsync(string moveMacro)
+        {
+            var result = new List<string>();
+            if (ProjectContext.RootPath == null || string.IsNullOrWhiteSpace(moveMacro)) return result;
+
+            // Level-up learnsets
+            try
+            {
+                var levelUpPath = PathLevelUp ?? Path.Combine(ProjectContext.RootPath, "armips", "data", "levelupdata.s");
+                if (File.Exists(levelUpPath))
+                {
+                    var text = await File.ReadAllTextAsync(levelUpPath);
+                    text = text.Replace("\r\n", "\n");
+                    int count = Regex.Matches(text, @"learnset\s+" + Regex.Escape(moveMacro) + @"\s*,\s*\d+", RegexOptions.Multiline).Count;
+                    if (count > 0) result.Add($"Level-up: {count} species");
+                }
+            }
+            catch { }
+
+            // Egg moves
+            try
+            {
+                var eggPath = PathEgg ?? Path.Combine(ProjectContext.RootPath, "armips", "data", "eggmoves.s");
+                if (File.Exists(eggPath))
+                {
+                    var text = await File.ReadAllTextAsync(eggPath);
+                    int count = Regex.Matches(text, @"eggmove\s+" + Regex.Escape(moveMacro) + @"\b").Count;
+                    if (count > 0) result.Add($"Egg moves: {count} species");
+                }
+            }
+            catch { }
+
+            // TM/HM mapping
+            try
+            {
+                var tmPath = PathTm ?? Path.Combine(ProjectContext.RootPath, "armips", "data", "tmlearnset.txt");
+                if (File.Exists(tmPath))
+                {
+                    var text = await File.ReadAllTextAsync(tmPath);
+                    text = text.Replace("\r\n", "\n");
+                    var headerRx = new Regex(@"^(?<hdr>(TM|HM)\d{3}):\s+" + Regex.Escape(moveMacro) + @"\s*$", RegexOptions.Multiline);
+                    var m = headerRx.Match(text);
+                    if (m.Success)
+                    {
+                        string header = m.Groups["hdr"].Value;
+                        // Count species in the block following the header up to next header or EOF
+                        int start = m.Index;
+                        var allHeaders = Regex.Matches(text, @"^(TM|HM)\d{3}:\s+[A-Z0-9_]+\s*$", RegexOptions.Multiline).Cast<Match>().ToList();
+                        int idx = allHeaders.FindIndex(mm => mm.Index == m.Index);
+                        int end = (idx + 1 < allHeaders.Count) ? allHeaders[idx + 1].Index : text.Length;
+                        string block = text.Substring(start, end - start);
+                        int speciesCount = Regex.Matches(block, @"^\s*SPECIES_[A-Z0-9_]+\s*$", RegexOptions.Multiline).Count;
+                        result.Add($"TM/HM: {header} ({speciesCount} species)");
+                    }
+                }
+            }
+            catch { }
+
+            // Tutor mapping
+            try
+            {
+                var tutorPath = PathTutor ?? Path.Combine(ProjectContext.RootPath, "armips", "data", "tutordata.txt");
+                if (File.Exists(tutorPath))
+                {
+                    var lines = await File.ReadAllLinesAsync(tutorPath);
+                    string currentTutor = string.Empty;
+                    int speciesCount = 0;
+                    foreach (var raw in lines)
+                    {
+                        var line = raw.Trim();
+                        if (string.IsNullOrEmpty(line) || line.StartsWith("#")) continue;
+                        var hdr = Regex.Match(line, @"^(?<tutor>TUTOR_[A-Z0-9_]+):\s+" + Regex.Escape(moveMacro) + @"\b");
+                        if (hdr.Success)
+                        {
+                            currentTutor = hdr.Groups["tutor"].Value;
+                            speciesCount = 0;
+                            continue;
+                        }
+                        if (!string.IsNullOrEmpty(currentTutor) && line.StartsWith("SPECIES_", StringComparison.Ordinal)) speciesCount++;
+                    }
+                    if (!string.IsNullOrEmpty(currentTutor)) result.Add($"Tutor: {currentTutor} ({speciesCount} species)");
+                }
+            }
+            catch { }
+
+            // Trainers
+            try
+            {
+                var trainersPath = PathTrainers ?? Path.Combine(ProjectContext.RootPath, "armips", "data", "trainers", "trainers.s");
+                if (File.Exists(trainersPath))
+                {
+                    var text = await File.ReadAllTextAsync(trainersPath);
+                    int uses = Regex.Matches(text, @"^\s*move\s+" + Regex.Escape(moveMacro) + @"\b", RegexOptions.Multiline).Count;
+                    if (uses > 0) result.Add($"Trainers: {uses} uses");
+                }
+            }
+            catch { }
+
+            return result;
         }
     }
 }

@@ -5,6 +5,8 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Data;
 using HGEngineGUI.Data;
 
 namespace HGEngineGUI.Pages
@@ -36,6 +38,11 @@ namespace HGEngineGUI.Pages
             NatGiftTypeBox.ItemsSource = HGEngineGUI.Data.HGParsers.TypeMacros;
             FieldPocketBox.ItemsSource = HGEngineGUI.Data.HGParsers.PocketMacros;
             BattlePocketBox.ItemsSource = HGEngineGUI.Data.HGParsers.BattlePocketMacros;
+            FieldUseFuncBox.ItemsSource = HGEngineGUI.Data.HGParsers.UseFunctionDisplayLabels;
+            BattleUseFuncBox.ItemsSource = HGEngineGUI.Data.HGParsers.UseFunctionDisplayLabels;
+            // Effect lists (ID: Name)
+            PluckEffectBox.ItemsSource = EffectCatalog.PluckLabels;
+            FlingEffectBox.ItemsSource = EffectCatalog.FlingLabels;
 
             if (HGEngineGUI.Data.HGParsers.HasMartItems)
             {
@@ -49,6 +56,23 @@ namespace HGEngineGUI.Pages
                 MartExpander.IsEnabled = false; // greys out per request
                 MartStatus.Text = "mart_items.s not found in armips/asm/custom";
             }
+        }
+
+        private void OnFieldUseFuncChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var text = FieldUseFuncBox.Text ?? string.Empty;
+            FieldUseFuncInfo.Text = DescribeUseFunc(text);
+        }
+
+        private void OnBattleUseFuncChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var text = BattleUseFuncBox.Text ?? string.Empty;
+            BattleUseFuncInfo.Text = DescribeUseFunc(text);
+        }
+
+        private static string DescribeUseFunc(string label)
+        {
+            return UseFuncDescriptions.Describe(label);
         }
 
         private void OnSearchChanged(object sender, TextChangedEventArgs e)
@@ -70,9 +94,9 @@ namespace HGEngineGUI.Pages
                 ItemNameBox.Text = _selectedData.Name ?? string.Empty;
                 ItemDescBox.Text = _selectedData.Description ?? string.Empty;
                 HoldEffectBox.Text = _selectedData.HoldEffect;
-                HoldEffectParamBox.Text = _selectedData.HoldEffectParam;
-                PluckEffectBox.Text = _selectedData.PluckEffect;
-                FlingEffectBox.Text = _selectedData.FlingEffect;
+                if (double.TryParse(_selectedData.HoldEffectParam, out var hefp)) HoldEffectParamBox.Value = hefp; else HoldEffectParamBox.Value = 0;
+                PluckEffectBox.Text = EffectCatalog.IdToLabel(EffectCatalog.PluckLabels, _selectedData.PluckEffect);
+                FlingEffectBox.Text = EffectCatalog.IdToLabel(EffectCatalog.FlingLabels, _selectedData.FlingEffect);
                 FlingPowerBox.Text = _selectedData.FlingPower;
                 NatGiftPowerBox.Text = _selectedData.NaturalGiftPower;
                 NatGiftTypeBox.Text = _selectedData.NaturalGiftType;
@@ -83,7 +107,58 @@ namespace HGEngineGUI.Pages
                 FieldUseFuncBox.Text = _selectedData.FieldUseFunc;
                 BattleUseFuncBox.Text = _selectedData.BattleUseFunc;
                 PartyUseBox.Text = _selectedData.PartyUse;
-                PartyParamsBox.Text = string.Join("\n", _selectedData.PartyFlags.Select(kv => $"{kv.Key}={kv.Value}").Concat(_selectedData.PartyParams.Select(kv => $"{kv.Key}={kv.Value}")));
+                // Populate numeric params
+                SetParamBox(HpRestoreParamBox, "hp_restore_param");
+                SetParamBox(PpRestoreParamBox, "pp_restore_param");
+                SetParamBox(FriendshipLoParamBox, "friendship_mod_lo_param");
+                SetParamBox(FriendshipMedParamBox, "friendship_mod_med_param");
+                SetParamBox(FriendshipHiParamBox, "friendship_mod_hi_param");
+                SetParamBox(HpEvUpParamBox, "hp_ev_up_param");
+                SetParamBox(AtkEvUpParamBox, "atk_ev_up_param");
+                SetParamBox(DefEvUpParamBox, "def_ev_up_param");
+                SetParamBox(SpeedEvUpParamBox, "speed_ev_up_param");
+                SetParamBox(SpatkEvUpParamBox, "spatk_ev_up_param");
+                SetParamBox(SpdefEvUpParamBox, "spdef_ev_up_param");
+                // Gather flags (prefer parsed cache; fall back to reading itemdata.c)
+                var flags = GetFlagsForCurrentItem();
+                // Diagnostics: read raw flags directly from itemdata.c to display source values
+                try
+                {
+                    var fileFlags = HGEngineGUI.Data.HGParsers.TryReadPartyFlagsFromItemDataFile(_selectedData.ItemMacro);
+                    var diags = new List<TextBlock>();
+                    foreach (var kv in fileFlags.OrderBy(k => k.Key))
+                    {
+                        diags.Add(new TextBlock { Text = $"{kv.Key} = {kv.Value}" });
+                    }
+                    FlagDiagnosticsList.ItemsSource = diags;
+                }
+                catch { FlagDiagnosticsList.ItemsSource = null; }
+                SetFlagCheckbox(FlagSlpHeal, flags, "slp_heal");
+                SetFlagCheckbox(FlagPsnHeal, flags, "psn_heal");
+                SetFlagCheckbox(FlagBrnHeal, flags, "brn_heal");
+                SetFlagCheckbox(FlagFrzHeal, flags, "frz_heal");
+                SetFlagCheckbox(FlagPrzHeal, flags, "prz_heal");
+                SetFlagCheckbox(FlagCfsHeal, flags, "cfs_heal");
+                SetFlagCheckbox(FlagInfHeal, flags, "inf_heal");
+                SetFlagCheckbox(FlagGuardSpec, flags, "guard_spec");
+                SetFlagCheckbox(FlagRevive, flags, "revive");
+                SetFlagCheckbox(FlagReviveAll, flags, "revive_all");
+                SetFlagCheckbox(FlagLevelUp, flags, "level_up");
+                SetFlagCheckbox(FlagEvolve, flags, "evolve");
+                SetFlagCheckbox(FlagPpUp, flags, "pp_up");
+                SetFlagCheckbox(FlagPpMax, flags, "pp_max");
+                SetFlagCheckbox(FlagPpRestore, flags, "pp_restore");
+                SetFlagCheckbox(FlagPpRestoreAll, flags, "pp_restore_all");
+                SetFlagCheckbox(FlagHpRestore, flags, "hp_restore");
+                SetFlagCheckbox(FlagHpEvUp, flags, "hp_ev_up");
+                SetFlagCheckbox(FlagAtkEvUp, flags, "atk_ev_up");
+                SetFlagCheckbox(FlagDefEvUp, flags, "def_ev_up");
+                SetFlagCheckbox(FlagSpeedEvUp, flags, "speed_ev_up");
+                SetFlagCheckbox(FlagSpatkEvUp, flags, "spatk_ev_up");
+                SetFlagCheckbox(FlagSpdefEvUp, flags, "spdef_ev_up");
+                SetFlagCheckbox(FlagFriendshipModLo, flags, "friendship_mod_lo");
+                SetFlagCheckbox(FlagFriendshipModMed, flags, "friendship_mod_med");
+                SetFlagCheckbox(FlagFriendshipModHi, flags, "friendship_mod_hi");
             }
         }
 
@@ -117,8 +192,8 @@ namespace HGEngineGUI.Pages
                 Description = ItemDescBox.Text ?? string.Empty,
                 HoldEffect = (HoldEffectBox.Text ?? string.Empty).Trim(),
                 HoldEffectParam = HoldEffectParamBox.Text?.Trim() ?? _selectedData.HoldEffectParam,
-                PluckEffect = PluckEffectBox.Text?.Trim() ?? _selectedData.PluckEffect,
-                FlingEffect = FlingEffectBox.Text?.Trim() ?? _selectedData.FlingEffect,
+                PluckEffect = EffectCatalog.LabelToId(PluckEffectBox.Text ?? _selectedData.PluckEffect),
+                FlingEffect = EffectCatalog.LabelToId(FlingEffectBox.Text ?? _selectedData.FlingEffect),
                 FlingPower = FlingPowerBox.Text?.Trim() ?? _selectedData.FlingPower,
                 NaturalGiftPower = NatGiftPowerBox.Text?.Trim() ?? _selectedData.NaturalGiftPower,
                 NaturalGiftType = (NatGiftTypeBox.Text ?? string.Empty).Trim(),
@@ -132,19 +207,108 @@ namespace HGEngineGUI.Pages
                 PartyFlags = new Dictionary<string, string>(_selectedData.PartyFlags),
                 PartyParams = new Dictionary<string, string>(_selectedData.PartyParams)
             };
-            // parse party params lines
+            // collect params from fields
             d.PartyFlags.Clear(); d.PartyParams.Clear();
-            var lines = (PartyParamsBox.Text ?? string.Empty).Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var ln in lines)
-            {
-                var idx = ln.IndexOf('=');
-                if (idx <= 0) continue;
-                var key = ln.Substring(0, idx).Trim();
-                var val = ln.Substring(idx + 1).Trim();
-                if (string.IsNullOrEmpty(key)) continue;
-                if (key.EndsWith("_param", StringComparison.Ordinal)) d.PartyParams[key] = val; else d.PartyFlags[key] = val;
-            }
+            CollectParam(d, HpRestoreParamBox, "hp_restore_param");
+            CollectParam(d, PpRestoreParamBox, "pp_restore_param");
+            CollectParam(d, FriendshipLoParamBox, "friendship_mod_lo_param");
+            CollectParam(d, FriendshipMedParamBox, "friendship_mod_med_param");
+            CollectParam(d, FriendshipHiParamBox, "friendship_mod_hi_param");
+            CollectParam(d, HpEvUpParamBox, "hp_ev_up_param");
+            CollectParam(d, AtkEvUpParamBox, "atk_ev_up_param");
+            CollectParam(d, DefEvUpParamBox, "def_ev_up_param");
+            CollectParam(d, SpeedEvUpParamBox, "speed_ev_up_param");
+            CollectParam(d, SpatkEvUpParamBox, "spatk_ev_up_param");
+            CollectParam(d, SpdefEvUpParamBox, "spdef_ev_up_param");
+            // collect boolean flags from checkboxes
+            CollectFlag(d, FlagSlpHeal, "slp_heal");
+            CollectFlag(d, FlagPsnHeal, "psn_heal");
+            CollectFlag(d, FlagBrnHeal, "brn_heal");
+            CollectFlag(d, FlagFrzHeal, "frz_heal");
+            CollectFlag(d, FlagPrzHeal, "prz_heal");
+            CollectFlag(d, FlagCfsHeal, "cfs_heal");
+            CollectFlag(d, FlagInfHeal, "inf_heal");
+            CollectFlag(d, FlagGuardSpec, "guard_spec");
+            CollectFlag(d, FlagRevive, "revive");
+            CollectFlag(d, FlagReviveAll, "revive_all");
+            CollectFlag(d, FlagLevelUp, "level_up");
+            CollectFlag(d, FlagEvolve, "evolve");
+            CollectFlag(d, FlagPpUp, "pp_up");
+            CollectFlag(d, FlagPpMax, "pp_max");
+            CollectFlag(d, FlagPpRestore, "pp_restore");
+            CollectFlag(d, FlagPpRestoreAll, "pp_restore_all");
+            CollectFlag(d, FlagHpRestore, "hp_restore");
+            CollectFlag(d, FlagHpEvUp, "hp_ev_up");
+            CollectFlag(d, FlagAtkEvUp, "atk_ev_up");
+            CollectFlag(d, FlagDefEvUp, "def_ev_up");
+            CollectFlag(d, FlagSpeedEvUp, "speed_ev_up");
+            CollectFlag(d, FlagSpatkEvUp, "spatk_ev_up");
+            CollectFlag(d, FlagSpdefEvUp, "spdef_ev_up");
+            CollectFlag(d, FlagFriendshipModLo, "friendship_mod_lo");
+            CollectFlag(d, FlagFriendshipModMed, "friendship_mod_med");
+            CollectFlag(d, FlagFriendshipModHi, "friendship_mod_hi");
             return d;
+        }
+
+        private Dictionary<string,bool> GetFlagsForCurrentItem()
+        {
+            var result = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            if (_selectedData != null)
+            {
+                foreach (var kv in _selectedData.PartyFlags)
+                {
+                    var s = (kv.Value ?? string.Empty).Trim();
+                    bool b = s.Equals("TRUE", StringComparison.OrdinalIgnoreCase) || s == "1";
+                    var key = (kv.Key ?? string.Empty).Trim();
+                    result[key] = b;
+                }
+
+                // Override with values read from the robust file parser (source of truth)
+                try
+                {
+                    var fileFlags = HGEngineGUI.Data.HGParsers.TryReadPartyFlagsFromItemDataFile(_selectedData.ItemMacro);
+                    foreach (var kv in fileFlags)
+                    {
+                        var key = (kv.Key ?? string.Empty).Trim();
+                        var sval = (kv.Value ?? string.Empty).Trim();
+                        bool b = sval.Equals("TRUE", StringComparison.OrdinalIgnoreCase) || sval == "1";
+                        result[key] = b;
+                    }
+                }
+                catch { }
+            }
+            return result;
+        }
+
+        private void SetFlagCheckbox(CheckBox cb, Dictionary<string,bool> flags, string key)
+        {
+            if (flags.TryGetValue(key, out var b)) cb.IsChecked = b; else cb.IsChecked = false;
+        }
+
+        private void CollectFlag(HGEngineGUI.Data.HGParsers.ItemDataEntry d, CheckBox cb, string key)
+        {
+            d.PartyFlags[key] = (cb.IsChecked == true) ? "TRUE" : "FALSE";
+        }
+
+        private void SetParamBox(NumberBox box, string key)
+        {
+            if (_selectedData == null) { box.Value = 0; return; }
+            if (_selectedData.PartyParams.TryGetValue(key, out var v))
+            {
+                if (double.TryParse(v, out var dv)) box.Value = dv; else box.Value = 0;
+            }
+            else
+            {
+                box.Value = 0;
+            }
+        }
+
+        private void CollectParam(HGEngineGUI.Data.HGParsers.ItemDataEntry d, NumberBox box, string key)
+        {
+            var val = box.Value;
+            // Default to 0 if NaN
+            if (double.IsNaN(val)) val = 0;
+            d.PartyParams[key] = ((int)val).ToString();
         }
 
         private async void OnPreviewItemData(object sender, RoutedEventArgs e)
@@ -269,6 +433,152 @@ namespace HGEngineGUI.Pages
             await dlg.ShowAsync();
         }
     }
+
+    // Converts the combo label into a concise tooltip (re-uses DescribeUseFunc)
+    public class UseFuncLabelToTooltipConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, string language)
+        {
+            var text = value as string ?? string.Empty;
+            // Reuse static method to produce description text
+            return UseFuncDescriptions.Describe(text);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, string language) => throw new NotImplementedException();
+    }
+
+    public static class UseFuncDescriptions
+    {
+        public static string Describe(string label)
+        {
+            if (string.IsNullOrWhiteSpace(label)) return string.Empty;
+            var cleaned = label.Replace(" (unused)", string.Empty);
+            if (!cleaned.Contains(":")) return string.Empty;
+            var parts = cleaned.Split(':');
+            var right = parts.Length > 1 ? parts[1] : string.Empty;
+            string desc = string.Empty;
+            if (right.Contains("ItemFieldUseFunc_Bicycle")) desc = "Bicycle: mount/dismount on the field (with checks).";
+            else if (right.Contains("ItemMenuUseFunc_HealingItem")) desc = "Healing (potions/status) via menu only.";
+            else if (right.Contains("ItemMenuUseFunc_TMHM")) desc = "TM/HM usage UI (menu).";
+            else if (right.Contains("ItemMenuUseFunc_Mail")) desc = "Mail UI (menu).";
+            else if (right.Contains("ItemMenuUseFunc_Berry")) desc = "Berry usage from menu (with check).";
+            else if (right.Contains("ItemMenuUseFunc_PalPad") || right.Contains("ItemFieldUseFunc_PalPad")) desc = "Opens Pal Pad on field.";
+            else if (right.Contains("OldRod") || right.Contains("GoodRod") || right.Contains("SuperRod")) desc = "Starts fishing on field (requires facing water).";
+            else if (right.Contains("ItemMenuUseFunc_EvoStone")) desc = "Evolution stone usage from menu.";
+            else if (right.Contains("ItemMenuUseFunc_EscapeRope")) desc = "Escape Rope logic (menu with map check).";
+            else if (right.Contains("ApricornBox")) desc = "Opens Apricorn Box on field.";
+            else if (right.Contains("BerryPots")) desc = "Opens Berry Pots on field.";
+            else if (right.Contains("UnownReport")) desc = "Opens Unown Report on field.";
+            else if (right.Contains("DowsingMchn")) desc = "Opens Dowsing Machine on field.";
+            else if (right.Contains("GbSounds")) desc = "Toggles GB Sounds (retro music) on field.";
+            else if (right.Contains("Gracidea")) desc = "Gracidea: Changes Shaymin form (field).";
+            else if (right.Contains("VSRecorder")) desc = "Opens VS Recorder on field.";
+            else if (right.Contains("RevealGlass")) desc = "Reveal Glass UI (form toggle).";
+            else if (right.Contains("DNASplicers")) desc = "DNA Splicers UI (Kyurem fuse/unfuse).";
+            else if (right.Contains("AbilityCapsule")) desc = "Ability Capsule usage from menu.";
+            else if (right.Contains("Mint")) desc = "Nature Mint usage from menu.";
+            else if (right.Contains("Nectar")) desc = "Nectar usage from menu.";
+            else if (right.Contains("ItemFieldUseFunc_Generic") && right.Contains("menu=NULL")) desc = "No field/menu behavior (placeholder).";
+            return desc;
+        }
+    }
+
+    public class EffectLabelToTooltipConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, string language)
+        {
+            var text = value as string ?? string.Empty;
+            return EffectCatalog.Describe(text);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, string language) => throw new NotImplementedException();
+    }
+
+    public static class EffectCatalog
+    {
+        private static readonly Dictionary<int, string> s_pluck = new()
+        {
+            {0, "None"},
+            {1, "Cures Paralysis"},
+            {2, "Cures Sleep"},
+            {3, "Cures Poison"},
+            {4, "Cures Burn"},
+            {5, "Cures Freeze"},
+            {6, "Restores 10 PP"},
+            {7, "Restores 10 HP"},
+            {8, "Cures Confusion"},
+            {9, "Cures Any Status"},
+            {10, "Restores 25% HP"},
+            {11, "Spicy (+Atk, -Atk)"},
+            {12, "Dry (+Def, -Def)"},
+            {13, "Sweet (+Sp.Atk, -Sp.Atk)"},
+            {14, "Bitter (+Sp.Def, -Sp.Def)"},
+            {15, "Sour (+Speed, -Speed)"},
+            {16, "+1 Attack (≤25% HP)"},
+            {17, "+1 Defense (≤25% HP)"},
+            {18, "+1 Speed (≤25% HP)"},
+            {19, "+1 Sp.Atk (≤25% HP)"},
+            {20, "+1 Sp.Def (≤25% HP)"},
+            {21, "+1 Crit Rate (≤25% HP)"},
+            {22, "+1 Random Stat (≤25% HP)"},
+            {23, "+1 Accuracy (≤25% HP)"},
+        };
+
+        private static readonly Dictionary<int, string> s_fling = CreateFling();
+
+        private static Dictionary<int, string> CreateFling()
+        {
+            // Fling shares 0-23 with Pluck effects, then adds 24-30 uniques
+            var d = new Dictionary<int, string>(s_pluck);
+            d[24] = "WhiteHerb";
+            d[25] = "MentalHerb";
+            d[26] = "RazorFang";
+            d[27] = "LightBall";
+            d[28] = "PoisonBarb";
+            d[29] = "ToxicOrb";
+            d[30] = "FlameOrb";
+            return d;
+        }
+
+        public static IReadOnlyList<string> PluckLabels { get; } = BuildLabels(s_pluck);
+        public static IReadOnlyList<string> FlingLabels { get; } = BuildLabels(s_fling);
+
+        private static List<string> BuildLabels(Dictionary<int,string> map)
+        {
+            return map.OrderBy(k => k.Key).Select(k => $"{k.Key}: {k.Value}").ToList();
+        }
+
+        public static string Describe(string label)
+        {
+            // Tooltip equals the right-hand name
+            if (string.IsNullOrWhiteSpace(label)) return string.Empty;
+            var parts = label.Split(':');
+            if (parts.Length < 2) return string.Empty;
+            return parts[1].Trim();
+        }
+
+        public static string IdToLabel(IReadOnlyList<string> labels, string? idText)
+        {
+            if (!int.TryParse(idText, out var id)) return idText ?? string.Empty;
+            var match = labels.FirstOrDefault(s => s.StartsWith(id.ToString() + ":", StringComparison.Ordinal));
+            return match ?? id.ToString();
+        }
+
+        public static string LabelToId(string label)
+        {
+            if (string.IsNullOrWhiteSpace(label)) return "0";
+            var idx = label.IndexOf(':');
+            if (idx > 0)
+            {
+                var left = label.Substring(0, idx).Trim();
+                if (int.TryParse(left, out var id)) return id.ToString();
+            }
+            // Fallback if user typed a number directly
+            if (int.TryParse(label.Trim(), out var id2)) return id2.ToString();
+            return "0";
+        }
+    }
 }
+
 
 

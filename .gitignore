@@ -8,7 +8,6 @@ $RECYCLE.BIN/
 .fleet/
 .vscode/
 
-
 # ----- Visual Studio / .NET build outputs -----
 bin/
 obj/
@@ -82,4 +81,3 @@ BundleArtifacts/
 *.swo
 *.bak
 
-MART-ITEMS-PATCH/

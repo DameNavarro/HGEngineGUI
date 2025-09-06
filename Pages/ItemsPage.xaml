@@ -5,7 +5,26 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="using:HGEngineGUI.Pages"
     mc:Ignorable="d">
+    <Page.Resources>
+        <local:UseFuncLabelToTooltipConverter x:Key="UseFuncTooltipConverter"/>
+        <DataTemplate x:Key="UseFuncItemTemplate">
+            <TextBlock Text="{Binding}">
+                <ToolTipService.ToolTip>
+                    <TextBlock TextWrapping="Wrap" Opacity="0.9" Text="{Binding Converter={StaticResource UseFuncTooltipConverter}}"/>
+                </ToolTipService.ToolTip>
+            </TextBlock>
+        </DataTemplate>
+        <local:EffectLabelToTooltipConverter x:Key="EffectTooltipConverter"/>
+        <DataTemplate x:Key="EffectItemTemplate">
+            <TextBlock Text="{Binding}">
+                <ToolTipService.ToolTip>
+                    <TextBlock TextWrapping="Wrap" Opacity="0.9" Text="{Binding Converter={StaticResource EffectTooltipConverter}}"/>
+                </ToolTipService.ToolTip>
+            </TextBlock>
+        </DataTemplate>
+    </Page.Resources>
     <Grid Padding="12">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="320"/>
@@ -37,8 +56,8 @@
                     </StackPanel>
                 </Grid>
 
-                <Expander Header="Item Details" IsExpanded="False">
-                    <StackPanel Spacing="8">
+                <StackPanel Spacing="8">
+                        <TextBlock Text="Item Details"/>
                         <TextBlock Text="Name"/>
                         <TextBox x:Name="ItemNameBox"/>
                         <TextBlock Text="Description"/>
@@ -53,11 +72,11 @@
                                 <TextBlock Text="HoldEffect"/>
                                 <ComboBox x:Name="HoldEffectBox" IsEditable="True"/>
                                 <TextBlock Text="HoldEffectParam"/>
-                                <TextBox x:Name="HoldEffectParamBox"/>
+                                <NumberBox x:Name="HoldEffectParamBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="0" Maximum="255"/>
                                 <TextBlock Text="PluckEffect"/>
-                                <TextBox x:Name="PluckEffectBox"/>
+                                <ComboBox x:Name="PluckEffectBox" IsEditable="True" ItemTemplate="{StaticResource EffectItemTemplate}"/>
                                 <TextBlock Text="FlingEffect"/>
-                                <TextBox x:Name="FlingEffectBox"/>
+                                <ComboBox x:Name="FlingEffectBox" IsEditable="True" ItemTemplate="{StaticResource EffectItemTemplate}"/>
                                 <TextBlock Text="FlingPower"/>
                                 <TextBox x:Name="FlingPowerBox"/>
                             </StackPanel>
@@ -93,9 +112,11 @@
                             </StackPanel>
                             <StackPanel Grid.Column="1" Spacing="4">
                                 <TextBlock Text="FieldUseFunc"/>
-                                <TextBox x:Name="FieldUseFuncBox"/>
+                                <ComboBox x:Name="FieldUseFuncBox" IsEditable="True" ItemTemplate="{StaticResource UseFuncItemTemplate}" SelectionChanged="OnFieldUseFuncChanged"/>
+                                <TextBlock x:Name="FieldUseFuncInfo" TextWrapping="Wrap" Opacity="0.8"/>
                                 <TextBlock Text="BattleUseFunc"/>
-                                <TextBox x:Name="BattleUseFuncBox"/>
+                                <ComboBox x:Name="BattleUseFuncBox" IsEditable="True" ItemTemplate="{StaticResource UseFuncItemTemplate}" SelectionChanged="OnBattleUseFuncChanged"/>
+                                <TextBlock x:Name="BattleUseFuncInfo" TextWrapping="Wrap" Opacity="0.8"/>
                             </StackPanel>
                             <StackPanel Grid.Column="2" Spacing="4">
                                 <TextBlock Text="PartyUse"/>
@@ -103,8 +124,105 @@
                             </StackPanel>
                         </Grid>
 
-                        <TextBlock Text="Party Params (one per line: name=value)"/>
-                        <TextBox x:Name="PartyParamsBox" AcceptsReturn="True" TextWrapping="NoWrap" Height="120"/>
+                        <TextBlock Text="Party Params"/>
+                        <Grid ColumnSpacing="16" RowSpacing="6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Spacing="4">
+                                <TextBlock Text="hp_restore_param"/>
+                                <NumberBox x:Name="HpRestoreParamBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="0" Maximum="255" />
+                                <TextBlock Text="pp_restore_param"/>
+                                <NumberBox x:Name="PpRestoreParamBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="0" Maximum="255" />
+                                <TextBlock Text="friendship_mod_lo_param"/>
+                                <NumberBox x:Name="FriendshipLoParamBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="-128" Maximum="127" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Text="friendship_mod_med_param"/>
+                                <NumberBox x:Name="FriendshipMedParamBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="-128" Maximum="127" />
+                                <TextBlock Text="friendship_mod_hi_param"/>
+                                <NumberBox x:Name="FriendshipHiParamBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="-128" Maximum="127" />
+                                <TextBlock Text="hp_ev_up_param"/>
+                                <NumberBox x:Name="HpEvUpParamBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="-128" Maximum="127" />
+                                <!-- Place SpAtk/SpDef side-by-side -->
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Spacing="4">
+                                        <TextBlock Text="spatk_ev_up_param"/>
+                                        <NumberBox x:Name="SpatkEvUpParamBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="-128" Maximum="127" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="4">
+                                        <TextBlock Text="spdef_ev_up_param"/>
+                                        <NumberBox x:Name="SpdefEvUpParamBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="-128" Maximum="127" />
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="4">
+                                <TextBlock Text="atk_ev_up_param"/>
+                                <NumberBox x:Name="AtkEvUpParamBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="-128" Maximum="127" />
+                                <TextBlock Text="def_ev_up_param"/>
+                                <NumberBox x:Name="DefEvUpParamBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="-128" Maximum="127" />
+                                <TextBlock Text="speed_ev_up_param"/>
+                                <NumberBox x:Name="SpeedEvUpParamBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="-128" Maximum="127" />
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="Party Flags (TRUE/FALSE)"/>
+                        <Grid ColumnSpacing="16" RowSpacing="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <CheckBox x:Name="FlagSlpHeal" Content="slp_heal"/>
+                                <CheckBox x:Name="FlagPsnHeal" Content="psn_heal"/>
+                                <CheckBox x:Name="FlagBrnHeal" Content="brn_heal"/>
+                                <CheckBox x:Name="FlagFrzHeal" Content="frz_heal"/>
+                                <CheckBox x:Name="FlagPrzHeal" Content="prz_heal"/>
+                                <CheckBox x:Name="FlagCfsHeal" Content="cfs_heal"/>
+                                <CheckBox x:Name="FlagInfHeal" Content="inf_heal"/>
+                                <CheckBox x:Name="FlagGuardSpec" Content="guard_spec"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <CheckBox x:Name="FlagRevive" Content="revive"/>
+                                <CheckBox x:Name="FlagReviveAll" Content="revive_all"/>
+                                <CheckBox x:Name="FlagLevelUp" Content="level_up"/>
+                                <CheckBox x:Name="FlagEvolve" Content="evolve"/>
+                                <CheckBox x:Name="FlagPpUp" Content="pp_up"/>
+                                <CheckBox x:Name="FlagPpMax" Content="pp_max"/>
+                                <CheckBox x:Name="FlagPpRestore" Content="pp_restore"/>
+                                <CheckBox x:Name="FlagPpRestoreAll" Content="pp_restore_all"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="2">
+                                <CheckBox x:Name="FlagHpRestore" Content="hp_restore"/>
+                                <CheckBox x:Name="FlagHpEvUp" Content="hp_ev_up"/>
+                                <CheckBox x:Name="FlagAtkEvUp" Content="atk_ev_up"/>
+                                <CheckBox x:Name="FlagDefEvUp" Content="def_ev_up"/>
+                                <CheckBox x:Name="FlagSpeedEvUp" Content="speed_ev_up"/>
+                                <CheckBox x:Name="FlagSpatkEvUp" Content="spatk_ev_up"/>
+                                <CheckBox x:Name="FlagSpdefEvUp" Content="spdef_ev_up"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="3" Spacing="2">
+                                <CheckBox x:Name="FlagFriendshipModLo" Content="friendship_mod_lo"/>
+                                <CheckBox x:Name="FlagFriendshipModMed" Content="friendship_mod_med"/>
+                                <CheckBox x:Name="FlagFriendshipModHi" Content="friendship_mod_hi"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Diagnostics: show source values parsed from itemdata.c -->
+                        <Expander Header="Party Flag Diagnostics" IsExpanded="False">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="From data/itemdata/itemdata.c"/>
+                                <ItemsControl x:Name="FlagDiagnosticsList"/>
+                            </StackPanel>
+                        </Expander>
 
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Button Content="Preview Item Data" Click="OnPreviewItemData"/>
@@ -112,8 +230,7 @@
                             <Button Content="Preview Text" Click="OnPreviewItemText"/>
                             <Button Content="Save Text" Click="OnSaveItemText"/>
                         </StackPanel>
-                    </StackPanel>
-                </Expander>
+                </StackPanel>
 
                 <Expander x:Name="MartExpander" Header="Mart Items (custom addon)" IsExpanded="False">
                     <StackPanel Spacing="8">

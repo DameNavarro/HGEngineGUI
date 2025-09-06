@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="HGEngineGUI.Pages.MovesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="using:HGEngineGUI.Pages"
+    mc:Ignorable="d">
+    <Grid Padding="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="340"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0" RowDefinitions="Auto,*" RowSpacing="8">
+            <TextBox x:Name="SearchBox" Grid.Row="0" PlaceholderText="Search moves" TextChanged="OnSearchChanged" Width="320"/>
+            <ListView Grid.Row="1" x:Name="MoveList" IsItemClickEnabled="True" ItemClick="OnMoveClick"/>
+        </Grid>
+
+        <ScrollViewer Grid.Column="1" Margin="16,0,0,0" VerticalScrollBarVisibility="Auto" VerticalScrollMode="Auto">
+            <StackPanel Spacing="10">
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="SelectedMoveText" Grid.Column="0"/>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="ID"/>
+                        <TextBlock x:Name="SelectedMoveIdText"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom">
+                        <Button Content="Preview" Click="OnPreviewMoves"/>
+                        <Button Content="Save" Click="OnSaveMoves"/>
+                    </StackPanel>
+                </Grid>
+
+                <Expander Header="General" IsExpanded="True">
+                    <Grid ColumnSpacing="12" RowSpacing="6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Spacing="6">
+                            <TextBlock Text="Name"/>
+                            <TextBox x:Name="NameBox"/>
+                            <TextBlock Text="Description"/>
+                            <TextBox x:Name="DescBox" AcceptsReturn="True" TextWrapping="Wrap" Height="120"/>
+                            <TextBlock Text="Type (TYPE_*)"/>
+                            <ComboBox x:Name="TypeBox" IsEditable="True"/>
+                            <TextBlock Text="Split (SPLIT_*)"/>
+                            <ComboBox x:Name="SplitBox" IsEditable="True"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="6">
+                            <TextBlock Text="Base Power"/>
+                            <NumberBox x:Name="PowerBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="0" Maximum="255"/>
+                            <TextBlock Text="Accuracy (0 or 1-100)"/>
+                            <NumberBox x:Name="AccuracyBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="0" Maximum="100"/>
+                            <TextBlock Text="PP (0-64)"/>
+                            <NumberBox x:Name="PpBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="0" Maximum="64"/>
+                            <TextBlock Text="Priority (-7..7)"/>
+                            <NumberBox x:Name="PriorityBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="-7" Maximum="7"/>
+                        </StackPanel>
+                    </Grid>
+                </Expander>
+
+                <Expander Header="Effect" IsExpanded="True">
+                    <Grid ColumnSpacing="12" RowSpacing="6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Spacing="6">
+                            <TextBlock Text="Effect (MOVE_EFFECT_*)"/>
+                            <ComboBox x:Name="EffectBox" IsEditable="True"/>
+                            <TextBlock Text="Secondary Effect Chance (0-100)"/>
+                            <NumberBox x:Name="SecChanceBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="0" Maximum="100"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="6">
+                            <TextBlock Text="Target (RANGE_*)"/>
+                            <ComboBox x:Name="TargetBox" IsEditable="True"/>
+                        </StackPanel>
+                    </Grid>
+                </Expander>
+
+                <Expander Header="Flags" IsExpanded="True">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <CheckBox x:Name="FlagContact" Content="FLAG_CONTACT"/>
+                            <CheckBox x:Name="FlagProtect" Content="FLAG_PROTECT"/>
+                            <CheckBox x:Name="FlagMagicCoat" Content="FLAG_MAGIC_COAT"/>
+                            <CheckBox x:Name="FlagSnatch" Content="FLAG_SNATCH"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="2">
+                            <CheckBox x:Name="FlagMirrorMove" Content="FLAG_MIRROR_MOVE"/>
+                            <CheckBox x:Name="FlagKingsRock" Content="FLAG_KINGS_ROCK"/>
+                            <CheckBox x:Name="FlagKeepHpBar" Content="FLAG_KEEP_HP_BAR"/>
+                            <CheckBox x:Name="FlagHideShadow" Content="FLAG_HIDE_SHADOW"/>
+                        </StackPanel>
+                    </Grid>
+                </Expander>
+
+                <Expander Header="Contest" IsExpanded="False">
+                    <Grid ColumnSpacing="12" RowSpacing="6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Spacing="6">
+                            <TextBlock Text="Appeal"/>
+                            <NumberBox x:Name="AppealBox" Value="0" SpinButtonPlacementMode="Inline" SmallChange="1" Minimum="0" Maximum="255"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="6">
+                            <TextBlock Text="Contest Type (CONTEST_*)"/>
+                            <ComboBox x:Name="ContestTypeBox" IsEditable="True"/>
+                        </StackPanel>
+                    </Grid>
+                </Expander>
+
+                <Expander Header="Where Used" IsExpanded="False">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Level-up, egg, TM/HM, tutor, and trainer references will appear here."/>
+                        <ItemsControl x:Name="UsageList"/>
+                    </StackPanel>
+                </Expander>
+
+                <Expander Header="Animations &amp; Scripts" IsExpanded="False">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Button Content="Open move_anim" Click="OnOpenMoveAnim"/>
+                        <Button Content="Open move_sub_anim" Click="OnOpenMoveSubAnim"/>
+                        <Button Content="Open effect scripts" Click="OnOpenEffectScripts"/>
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>
+
+
