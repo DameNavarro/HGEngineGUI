@@ -32,6 +32,8 @@ namespace HGEngineGUI.Pages
             {
                 ProjectContext.SetRoot(folder.Path);
                 await Data.HGParsers.RefreshCachesAsync();
+                // Ensure global species count reflects latest refresh
+                try { SpeciesCountText.Text = $"Species: {HGEngineGUI.Data.HGParsers.Species.Count}"; ProjectContext.SpeciesCount = HGEngineGUI.Data.HGParsers.Species.Count; } catch { }
                 RefreshUi();
                 // Start watching the armips/data folder for changes
                 TryStartWatcher();

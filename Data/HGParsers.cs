@@ -10,7 +10,7 @@ namespace HGEngineGUI.Data
 {
     public static class HGParsers
     {
-        private static readonly Regex DefineRegex = new(@"^\s*#define\s+(?<name>[A-Z0-9_]+)\s+(?<value>[-+*/()A-Z0-9_]+)\s*$", RegexOptions.Compiled);
+        private static readonly Regex DefineRegex = new(@"^\s*#define\s+(?<name>[A-Z0-9_]+)\s+(?<value>.+?)(?:\s*(?://.*|/\*.*\*/))?\s*$", RegexOptions.Compiled);
 
         public static IReadOnlyList<SpeciesEntry> Species => _species;
         private static List<SpeciesEntry> _species = new();
@@ -31,6 +31,8 @@ namespace HGEngineGUI.Data
         private static Dictionary<int,string> _typeIdToMacro = new();
         public static bool TryGetTypeValue(string macro, out int value) => _typeValues.TryGetValue(macro, out value);
         public static bool TryGetTypeMacro(int value, out string macro) => _typeIdToMacro.TryGetValue(value, out macro!);
+        // Build-time feature flags from include/config.h (e.g., FAIRY_TYPE_IMPLEMENTED)
+        private static Dictionary<string,string> _configDefines = new(StringComparer.Ordinal);
         public static IReadOnlyList<string> AbilityMacros => _abilityMacros;
         private static List<string> _abilityMacros = new();
         // Move-related macro caches
@@ -670,23 +672,66 @@ namespace HGEngineGUI.Data
             // Resolve data file paths once per session
             ResolveDataPaths();
 
-            // species.h
+            // species.h (evaluate expressions so special forms defined relative to START macros resolve)
             var speciesHeader = Path.Combine(ProjectContext.RootPath, "include", "constants", "species.h");
             if (File.Exists(speciesHeader))
             {
+                // Reset species-related caches before rebuilding, or subsequent refreshes will skip entries
+                _speciesValues = new(StringComparer.Ordinal);
+                _speciesIdToMacro = new();
+                _speciesMacroNames = new();
+
                 var lines = await File.ReadAllLinesAsync(speciesHeader);
-                foreach (var line in lines)
+                // Collect all #defines first
+                var exprByName = new Dictionary<string, string>(StringComparer.Ordinal);
+                foreach (var raw in lines)
                 {
-                    var m = DefineRegex.Match(line);
+                    var m = DefineRegex.Match(raw);
                     if (!m.Success) continue;
-                    var name = m.Groups["name"].Value;
-                    if (!name.StartsWith("SPECIES_", StringComparison.Ordinal)) continue;
-                    if (!int.TryParse(m.Groups["value"].Value, out var id)) continue;
-                    _species.Add(new SpeciesEntry(id, name));
+                    var name = m.Groups["name"].Value.Trim();
+                    var valueExpr = m.Groups["value"].Value.Trim();
+                    if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(valueExpr)) continue;
+                    exprByName[name] = valueExpr;
+                }
+
+                // Resolve numeric values by evaluating expressions referencing earlier defines
+                var resolved = new Dictionary<string, int>(StringComparer.Ordinal);
+                // First pass: direct integers
+                foreach (var kv in exprByName)
+                {
+                    if (TryParseIntLiteral(kv.Value, out int v))
+                    {
+                        resolved[kv.Key] = v;
+                    }
+                }
+                // Multi-pass resolve with increased iterations for long chains
+                for (int pass = 0; pass < 32; pass++)
+                {
+                    bool progressed = false;
+                    foreach (var kv in exprByName)
+                    {
+                        if (resolved.ContainsKey(kv.Key)) continue;
+                        if (TryEvaluateExpression(kv.Value, resolved, out int v))
+                        {
+                            resolved[kv.Key] = v;
+                            progressed = true;
+                        }
+                    }
+                    if (!progressed) break;
+                }
+
+                // Build species list from resolved SPECIES_*
+                foreach (var kv in resolved)
+                {
+                    if (!kv.Key.StartsWith("SPECIES_", StringComparison.Ordinal)) continue;
+                    int id = kv.Value;
+                    var name = kv.Key;
+                    if (!_speciesIdToMacro.ContainsKey(id))
+                        _species.Add(new SpeciesEntry(id, name));
                     _speciesValues[name] = id;
                     _speciesIdToMacro[id] = name;
                 }
-                _species.Sort((a, b) => a.Id.CompareTo(b.Id));
+                _species = _species.Distinct().OrderBy(s => s.Id).ToList();
                 ProjectContext.SpeciesCount = _species.Count;
                 _speciesMacroNames = _species.Select(s => s.Name).ToList();
             }
@@ -770,6 +815,27 @@ namespace HGEngineGUI.Data
                     if (int.TryParse(m.Groups["v"].Value, out var tv)) { _typeValues[name] = tv; _typeIdToMacro[tv] = name; }
                 }
             }
+
+            // Read feature flags from include/config.h
+            _configDefines = new(StringComparer.Ordinal);
+            try
+            {
+                var cfgHeader = Path.Combine(ProjectContext.RootPath, "include", "config.h");
+                if (File.Exists(cfgHeader))
+                {
+                    var lines = await File.ReadAllLinesAsync(cfgHeader);
+                    var rx = new Regex(@"^\s*#define\s+(?<name>[A-Z0-9_]+)(?:\s+(?<value>.+?))?\s*(?://.*|/\*.*\*/)?\s*$");
+                    foreach (var raw in lines)
+                    {
+                        var m = rx.Match(raw);
+                        if (!m.Success) continue;
+                        var name = m.Groups["name"].Value.Trim();
+                        var value = m.Groups["value"].Success ? m.Groups["value"].Value.Trim() : string.Empty;
+                        if (!string.IsNullOrEmpty(name) && !_configDefines.ContainsKey(name)) _configDefines[name] = value;
+                    }
+                }
+            }
+            catch { }
 
             // Abilities: prefer asm/include/abilities.inc if present; else fallback to include/constants/ability.h
             _abilityMacros = new();
@@ -1453,11 +1519,11 @@ namespace HGEngineGUI.Data
                         ov.BaseSpAttack = int.Parse(bs.Groups["satk"].Value);
                         ov.BaseSpDefense = int.Parse(bs.Groups["sdef"].Value);
                     }
-                    var types = Regex.Match(block, @"types\s+(?<t1>[A-Z0-9_]+),\s*(?<t2>[A-Z0-9_]+)");
+                    var types = Regex.Match(block, @"types\s+(?<t1>[^,\r\n]+),\s*(?<t2>[^\r\n]+)");
                     if (types.Success)
                     {
-                        ov.Type1 = types.Groups["t1"].Value;
-                        ov.Type2 = types.Groups["t2"].Value;
+                        ov.Type1 = ResolveTypeToken(types.Groups["t1"].Value);
+                        ov.Type2 = ResolveTypeToken(types.Groups["t2"].Value);
                     }
                     var catchrate = Regex.Match(block, @"catchrate\s+(?<v>\d+)");
                     if (catchrate.Success) ov.CatchRate = int.Parse(catchrate.Groups["v"].Value);
@@ -1720,6 +1786,117 @@ namespace HGEngineGUI.Data
             }
             catch { }
             return null;
+        }
+
+        // Evaluate constant expressions used in species.h
+        // Supports +, -, parentheses, and identifiers that are known defines.
+        private static bool TryEvaluateExpression(string expr, Dictionary<string, int> known, out int value)
+        {
+            value = 0;
+            if (string.IsNullOrWhiteSpace(expr)) return false;
+            var s = expr.Trim();
+            // Strip outer parentheses
+            while (s.StartsWith("(") && s.EndsWith(")") && IsBalancedParens(s))
+            {
+                s = s.Substring(1, s.Length - 2).Trim();
+            }
+            if (TryParseIntLiteral(s, out value)) return true;
+
+            // Replace identifiers with known numeric values
+            string replaced = Regex.Replace(s, @"[A-Z_][A-Z0-9_]*", m =>
+            {
+                var key = m.Value;
+                return known.TryGetValue(key, out var v) ? v.ToString() : key; // leave unresolved as-is
+            });
+            // If any identifiers remain, fail
+            if (Regex.IsMatch(replaced, @"[A-Za-z_]")) return false;
+
+            // Support simple + and - binary chain
+            try
+            {
+                int acc = 0;
+                int sign = 1;
+                int i = 0;
+                while (i < replaced.Length)
+                {
+                    char c = replaced[i];
+                    if (char.IsWhiteSpace(c)) { i++; continue; }
+                    if (c == '+') { sign = 1; i++; continue; }
+                    if (c == '-') { sign = -1; i++; continue; }
+                    // number
+                    int j = i;
+                    while (j < replaced.Length && (char.IsDigit(replaced[j]))) j++;
+                    if (j == i) return false;
+                    int term = int.Parse(replaced.Substring(i, j - i));
+                    acc += sign * term;
+                    i = j;
+                }
+                value = acc;
+                return true;
+            }
+            catch { return false; }
+        }
+
+        private static bool IsBalancedParens(string s)
+        {
+            int d = 0;
+            foreach (var ch in s)
+            {
+                if (ch == '(') d++;
+                else if (ch == ')') { d--; if (d < 0) return false; }
+            }
+            return d == 0;
+        }
+
+        // Config helpers
+        private static bool GetConfigFlag(string name)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(name)) return false;
+                if (_configDefines.TryGetValue(name.Trim(), out var val))
+                {
+                    if (string.IsNullOrWhiteSpace(val)) return true; // defined without value
+                    val = val.Trim();
+                    if (int.TryParse(val, out var n)) return n != 0;
+                    if (val.Equals("TRUE", StringComparison.OrdinalIgnoreCase)) return true;
+                    if (val.Equals("FALSE", StringComparison.OrdinalIgnoreCase)) return false;
+                    if (val.Equals("YES", StringComparison.OrdinalIgnoreCase)) return true;
+                    if (val.Equals("NO", StringComparison.OrdinalIgnoreCase)) return false;
+                    return true;
+                }
+            }
+            catch { }
+            return false;
+        }
+
+        private static string ResolveTypeToken(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token)) return string.Empty;
+            string t = token.Trim();
+            while (t.StartsWith("(") && t.EndsWith(")") && IsBalancedParens(t)) t = t.Substring(1, t.Length - 2).Trim();
+            if (t.StartsWith("TYPE_", StringComparison.Ordinal)) return t;
+            var m = Regex.Match(t, @"^\(?\s*(?<flag>[A-Z0-9_]+)\s*\)?\s*\?\s*(?<a>TYPE_[A-Z0-9_]+)\s*:\s*(?<b>TYPE_[A-Z0-9_]+)$");
+            if (m.Success)
+            {
+                bool cond = GetConfigFlag(m.Groups["flag"].Value);
+                return cond ? m.Groups["a"].Value : m.Groups["b"].Value;
+            }
+            var mm = Regex.Match(t, @"(TYPE_[A-Z0-9_]+)");
+            if (mm.Success) return mm.Groups[1].Value;
+            return t;
+        }
+
+        private static bool TryParseIntLiteral(string s, out int value)
+        {
+            value = 0;
+            if (string.IsNullOrWhiteSpace(s)) return false;
+            var t = s.Trim();
+            if (t.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            {
+                return int.TryParse(t.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out value);
+            }
+            return int.TryParse(t, out value);
         }
 
         // Parse armips/data/moves.s into MoveEntry records

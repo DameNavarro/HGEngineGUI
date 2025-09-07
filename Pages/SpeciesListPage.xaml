@@ -6,7 +6,8 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:local="using:HGEngineGUI.Pages"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    Loaded="OnPageLoaded">
     <Grid Padding="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -16,8 +17,9 @@
         <StackPanel Orientation="Horizontal" Spacing="12">
             <TextBox x:Name="SearchBox" PlaceholderText="Search species" TextChanged="OnSearchChanged" Width="300"/>
             <TextBlock Text="Read-only preview of parsed species from include/constants/species.h" VerticalAlignment="Center"/>
+            <TextBlock x:Name="StatusText" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="Gray"/>
         </StackPanel>
-        <ListView Grid.Row="1" x:Name="SpeciesList" ItemsSource="{x:Bind _filtered, Mode=OneWay}" IsItemClickEnabled="True" ItemClick="OnItemClick" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollMode="Enabled">
+        <ListView Grid.Row="1" x:Name="SpeciesList" IsItemClickEnabled="True" ItemClick="OnItemClick" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollMode="Enabled" ContainerContentChanging="OnContainerContentChanging">
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="local:SpeciesEntry">
                     <Grid Padding="4" ColumnSpacing="8">
@@ -26,9 +28,9 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <Image Width="40" Height="40" Source="{x:Bind IconPath, Mode=OneWay}" Stretch="Uniform"/>
+                        <Image x:Name="IconImage" Width="40" Height="40" Stretch="Uniform"/>
                         <TextBlock Grid.Column="1" Width="64" Text="{x:Bind Id}"/>
-                        <TextBlock Grid.Column="2" Text="{x:Bind Name}"/>
+                        <TextBlock Grid.Column="2" Text="{x:Bind DisplayName}"/>
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>

@@ -42,9 +42,37 @@ namespace HGEngineGUI
                 {
                     appWindow?.SetIcon(iconPath);
                 }
+
+                // Extend content into title bar and set custom drag region
+                TryEnableCustomTitleBar(appWindow);
             }
             catch { /* non-fatal if icon cannot be set */ }
             UpdateStatus("Ready");
+        }
+
+        private void TryEnableCustomTitleBar(AppWindow? appWindow)
+        {
+            try
+            {
+                // Use AppWindowTitleBar APIs when available (Windows 11) to hide system title and allow custom UI
+                if (appWindow != null)
+                {
+                    var titleBar = appWindow.TitleBar;
+                    if (titleBar != null)
+                    {
+                        titleBar.ExtendsContentIntoTitleBar = true;
+                        titleBar.IconShowOptions = IconShowOptions.HideIconAndSystemMenu;
+                        // Set button colors to blend with our theme
+                        titleBar.ButtonBackgroundColor = Windows.UI.Color.FromArgb(0, 0, 0, 0);
+                        titleBar.ButtonInactiveBackgroundColor = Windows.UI.Color.FromArgb(0, 0, 0, 0);
+                    }
+                }
+
+                // Also set the Window's title bar extension and drag region (WinUI 3 API)
+                this.ExtendsContentIntoTitleBar = true;
+                if (AppTitleBar != null) this.SetTitleBar(AppTitleBar);
+            }
+            catch { }
         }
 
         private void OnNavigationSelectionChanged(object sender, Microsoft.UI.Xaml.Controls.NavigationViewSelectionChangedEventArgs e)

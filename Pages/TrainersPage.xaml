@@ -6,7 +6,17 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:conv="using:HGEngineGUI.Converters"
     mc:Ignorable="d">
+    <!-- Converters -->
+    <Page.Resources>
+        <conv:MacroToDisplayConverter x:Key="MacroToDisplayConverter" />
+         <!-- Shared template for macro strings -->
+    <DataTemplate x:Key="FriendlyMacroTemplate" x:DataType="x:String">
+        <TextBlock Text="{Binding Converter={StaticResource MacroToDisplayConverter}}"/>
+    </DataTemplate>
+    </Page.Resources>
+
     <Grid Padding="12">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="320"/>
@@ -38,26 +48,56 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <ComboBox x:Name="ClassCombo" Grid.Column="0" PlaceholderText="Class" IsEditable = "true"/>
+                <ComboBox x:Name="ClassCombo" Grid.Column="0" PlaceholderText="Class" IsEditable = "true">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <TextBlock Text="{Binding Converter={StaticResource MacroToDisplayConverter}}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                     <TextBox x:Name="AIFlagsBox" Width="240" PlaceholderText="AI flags"/>
                     <Button x:Name="EditAIFlagsBtn" Content="Edit" Click="OnEditAIFlags"/>
                     <Button x:Name="AIFlagsHelpBtn" Content="?" Click="OnShowAIFlagsHelp"/>
                 </StackPanel>
                 <ComboBox x:Name="BattleTypeCombo" Grid.Column="2">
-                    <ComboBoxItem Content="SINGLE_BATTLE"/>
-                    <ComboBoxItem Content="DOUBLE_BATTLE"/>
+                    <ComboBoxItem Content="Single Battle" Tag="SINGLE_BATTLE"/>
+                    <ComboBoxItem Content="Double Battle" Tag="DOUBLE_BATTLE"/>
                 </ComboBox>
-                <ComboBox x:Name="Item1Combo" Grid.Column="3" PlaceholderText="Item 1" IsEditable = "true"/>
-                <ComboBox x:Name="Item2Combo" Grid.Column="4" PlaceholderText="Item 2" IsEditable = "true"/>
+                <ComboBox x:Name="Item1Combo" Grid.Column="3" PlaceholderText="Item 1" IsEditable = "true">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <TextBlock Text="{Binding Converter={StaticResource MacroToDisplayConverter}}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <ComboBox x:Name="Item2Combo" Grid.Column="4" PlaceholderText="Item 2" IsEditable = "true">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <TextBlock Text="{Binding Converter={StaticResource MacroToDisplayConverter}}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </Grid>
             <Grid ColumnSpacing="8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <ComboBox x:Name="Item3Combo" Grid.Column="0" PlaceholderText="Item 3" IsEditable = "true"/>
-                <ComboBox x:Name="Item4Combo" Grid.Column="1" PlaceholderText="Item 4" IsEditable = "true"/>
+                <ComboBox x:Name="Item3Combo" Grid.Column="0" PlaceholderText="Item 3" IsEditable = "true">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                        <TextBlock Text="{Binding Converter={StaticResource MacroToDisplayConverter}}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <ComboBox x:Name="Item4Combo" Grid.Column="1" PlaceholderText="Item 4" IsEditable = "true">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                        <TextBlock Text="{Binding Converter={StaticResource MacroToDisplayConverter}}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </Grid>
             <CommandBar>
                 <AppBarButton Icon="PreviewLink" Label="Preview Header" Click="OnPreviewTrainerHeader"/>
@@ -74,6 +114,8 @@
             <CommandBar>
                 <AppBarButton Icon="PreviewLink" Label="Preview" Click="OnPreviewParty"/>
                 <AppBarButton Icon="Save" Label="Save Party" Click="OnSaveParty"/>
+                <AppBarSeparator/>
+                <AppBarButton Icon="Download" Label="Export Spreadsheet (.xlsx)" Click="OnExportSpreadsheet" x:Name="ExportSpreadsheetBtn"/>
                 <AppBarSeparator/>
                 <AppBarButton Label="New Row" Click="OnClonePartyRow">
                     <AppBarButton.Icon>

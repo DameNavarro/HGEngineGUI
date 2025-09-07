@@ -10,6 +10,13 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
                 <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
+            <!-- Global styles for Mica: make surfaces transparent so Mica shows through -->
+            <Style TargetType="Page">
+                <Setter Property="Background" Value="Transparent"/>
+            </Style>
+            <Style TargetType="NavigationView">
+                <Setter Property="Background" Value="Transparent"/>
+            </Style>
             <!-- Other app resources here -->
         </ResourceDictionary>
     </Application.Resources>

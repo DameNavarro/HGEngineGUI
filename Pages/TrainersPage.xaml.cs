@@ -1,8 +1,12 @@
+using Microsoft.UI.Xaml;           // <-- needed for DataTemplate
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Markup;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.IO;
+using HGEngineGUI.Converters;
 
 namespace HGEngineGUI.Pages
 {
@@ -44,8 +48,21 @@ namespace HGEngineGUI.Pages
             }
             try
             {
+                // Refresh external tools state for conditional UI
+                Services.ExternalTools.Refresh();
+                if (ExportSpreadsheetBtn != null)
+                {
+                    bool canExport = Services.ExternalTools.HasRnbEditor && Services.ExternalTools.HasPython && ProjectContext.RootPath != null;
+                    ExportSpreadsheetBtn.IsEnabled = canExport;
+                    if (canExport)
+                        ToolTipService.SetToolTip(ExportSpreadsheetBtn, null);
+                    else
+                        ToolTipService.SetToolTip(ExportSpreadsheetBtn, "Install rnbstyle-hge-editor in Tools/ and Python 3.10+ to enable export.");
+                }
                 await Data.HGParsers.RefreshTrainersAsync();
-                _all = Data.HGParsers.Trainers.Select(t => $"{t.Id}: {t.Name} [{t.Class}] mons={t.NumMons} AI={t.AIFlags} Type={t.BattleType} Items={string.Join(",", t.Items)}").ToList();
+                _all = Data.HGParsers.Trainers
+                    .Select(t => $"{t.Id}: {t.Name} [{MacroToDisplayConverter.ToDisplay(t.Class)}]")
+                    .ToList();
                 ApplyFilter();
 
                 // Fill dropdowns
@@ -102,7 +119,7 @@ namespace HGEngineGUI.Pages
                     await Data.HGParsers.RefreshTrainerDetailsAsync(id);
                     var header = Data.HGParsers.Trainers.FirstOrDefault(t => t.Id == id);
                     _currentTrainerName = header?.Name ?? string.Empty;
-                    HeaderText.Text = header != null ? $"{header.Id}: {header.Name} [{header.Class}] • mons={header.NumMons} • AI={header.AIFlags} • Type={header.BattleType}" : $"Trainer {id}";
+                    HeaderText.Text = header != null ? $"{header.Id}: {header.Name} [{MacroToDisplayConverter.ToDisplay(header.Class)}]" : $"Trainer {id}";
                     _partyRows = Data.HGParsers.CurrentTrainerParty.Select(m => new PartyRow
                     {
                         Slot = m.Index,
@@ -128,7 +145,11 @@ namespace HGEngineGUI.Pages
                     {
                         ClassCombo.SelectedItem = header.Class;
                         AIFlagsBox.Text = header.AIFlags;
-                        BattleTypeCombo.SelectedIndex = header.BattleType == "DOUBLE_BATTLE" ? 1 : 0;
+                        // Select battle type by Tag matching the macro
+                        var btItem = BattleTypeCombo.Items
+                            .OfType<ComboBoxItem>()
+                            .FirstOrDefault(ci => string.Equals(ci.Tag?.ToString(), header.BattleType, StringComparison.Ordinal));
+                        if (btItem != null) BattleTypeCombo.SelectedItem = btItem; else BattleTypeCombo.SelectedIndex = 0;
                         Item1Combo.SelectedItem = header.Items.ElementAtOrDefault(0) ?? "ITEM_NONE";
                         Item2Combo.SelectedItem = header.Items.ElementAtOrDefault(1) ?? "ITEM_NONE";
                         Item3Combo.SelectedItem = header.Items.ElementAtOrDefault(2) ?? "ITEM_NONE";
@@ -177,6 +198,14 @@ namespace HGEngineGUI.Pages
         {
             if (PartyStack == null) return;
             PartyStack.Children.Clear();
+            var friendly = (DataTemplate)Resources["FriendlyMacroTemplate"];
+            // Friendly item template for macro strings shown in dropdowns
+            static DataTemplate FriendlyTemplate()
+            {
+            const string TemplateXaml = "<DataTemplate xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" xmlns:conv=\"using:HGEngineGUI.Converters\"><TextBlock Text=\"{Binding Converter={StaticResource MacroToDisplayConverter}}\"/></DataTemplate>";
+            return (DataTemplate)XamlReader.Load(TemplateXaml);
+            }
+
             foreach (var row in _partyRows.OrderBy(r => r.Slot))
             {
                 var container = new StackPanel { Spacing = 8, Padding = new Microsoft.UI.Xaml.Thickness(4) };
@@ -219,7 +248,7 @@ namespace HGEngineGUI.Pages
                 Grid.SetColumn(ivsStack, 3);
 
                 var abilitySlotStack = new StackPanel { Width = 120 };
-                abilitySlotStack.Children.Add(new TextBlock { Text = "AbilitySlot", FontSize = 12 });
+                abilitySlotStack.Children.Add(new TextBlock { Text = "Ability slot", FontSize = 12 });
                 var abilitySlotBox = new TextBox { Text = row.AbilitySlot.ToString() };
                 abilitySlotBox.TextChanging += (s, e) => { if (int.TryParse(abilitySlotBox.Text, out var v)) row.AbilitySlot = v; };
                 abilitySlotStack.Children.Add(abilitySlotBox);
@@ -229,6 +258,7 @@ namespace HGEngineGUI.Pages
                 var itemStack = new StackPanel { Width = 240 };
                 itemStack.Children.Add(new TextBlock { Text = "Item", FontSize = 12 });
                 var itemCombo = new ComboBox { IsEditable = true, ItemsSource = ItemMacroList, SelectedItem = row.Item };
+                itemCombo.ItemTemplate = friendly;
                 itemCombo.SelectionChanged += (s, e) => { row.Item = (itemCombo.SelectedItem as string) ?? (itemCombo.Text ?? string.Empty); };
                 itemCombo.LostFocus += (s, e) => { row.Item = itemCombo.Text ?? string.Empty; };
                 itemStack.Children.Add(itemCombo);
@@ -248,6 +278,7 @@ namespace HGEngineGUI.Pages
                     parent.Children.Add(new TextBlock { Text = label, FontSize = 12 });
                     var initial = getVal() ?? string.Empty;
                     var cb = new ComboBox { IsEditable = true, ItemsSource = MoveMacroList, SelectedItem = initial };
+                    cb.ItemTemplate = friendly;
                     cb.Text = initial;
                     cb.SelectionChanged += (s, e) => setVal((cb.SelectedItem as string) ?? (cb.Text ?? string.Empty));
                     cb.LostFocus += (s, e) => setVal(cb.Text ?? string.Empty);
@@ -261,9 +292,9 @@ namespace HGEngineGUI.Pages
 
                 var miscGrid = new Grid { ColumnSpacing = 8 };
                 for (int i = 0; i < 4; i++) miscGrid.ColumnDefinitions.Add(new ColumnDefinition());
-                var natureStack = new StackPanel(); natureStack.Children.Add(new TextBlock { Text = "Nature", FontSize = 12 }); var natureBox = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.NatureMacros, SelectedItem = row.Nature }; natureBox.SelectionChanged += (s, e) => { row.Nature = (natureBox.SelectedItem as string) ?? (natureBox.Text ?? string.Empty); }; natureBox.LostFocus += (s, e) => { row.Nature = natureBox.Text ?? string.Empty; }; natureStack.Children.Add(natureBox); miscGrid.Children.Add(natureStack); Grid.SetColumn(natureStack, 0);
+                var natureStack = new StackPanel(); natureStack.Children.Add(new TextBlock { Text = "Nature", FontSize = 12 }); var natureBox = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.NatureMacros, SelectedItem = row.Nature }; natureBox.ItemTemplate = friendly; natureBox.SelectionChanged += (s, e) => { row.Nature = (natureBox.SelectedItem as string) ?? (natureBox.Text ?? string.Empty); }; natureBox.LostFocus += (s, e) => { row.Nature = natureBox.Text ?? string.Empty; }; natureStack.Children.Add(natureBox); miscGrid.Children.Add(natureStack); Grid.SetColumn(natureStack, 0);
                 var formStack = new StackPanel(); formStack.Children.Add(new TextBlock { Text = "Form", FontSize = 12 }); var formBox = new TextBox { Text = row.Form.ToString() }; formBox.TextChanging += (s, e) => { if (int.TryParse(formBox.Text, out var v)) row.Form = v; }; formStack.Children.Add(formBox); miscGrid.Children.Add(formStack); Grid.SetColumn(formStack, 1);
-                var ballStack = new StackPanel(); ballStack.Children.Add(new TextBlock { Text = "Ball", FontSize = 12 }); var ballBox = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.BallMacros, SelectedItem = row.Ball }; ballBox.SelectionChanged += (s, e) => { row.Ball = (ballBox.SelectedItem as string) ?? (ballBox.Text ?? string.Empty); }; ballBox.LostFocus += (s, e) => { row.Ball = ballBox.Text ?? string.Empty; }; ballStack.Children.Add(ballBox); miscGrid.Children.Add(ballStack); Grid.SetColumn(ballStack, 2);
+                var ballStack = new StackPanel(); ballStack.Children.Add(new TextBlock { Text = "Ball", FontSize = 12 }); var ballBox = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.BallMacros, SelectedItem = row.Ball }; ballBox.ItemTemplate = friendly; ballBox.SelectionChanged += (s, e) => { row.Ball = (ballBox.SelectedItem as string) ?? (ballBox.Text ?? string.Empty); }; ballBox.LostFocus += (s, e) => { row.Ball = ballBox.Text ?? string.Empty; }; ballStack.Children.Add(ballBox); miscGrid.Children.Add(ballStack); Grid.SetColumn(ballStack, 2);
                 var shinyStack = new StackPanel(); shinyStack.Children.Add(new TextBlock { Text = "Shiny Lock", FontSize = 12 }); var shinyBox = new CheckBox { IsChecked = row.ShinyLock }; shinyBox.Checked += (s, e) => row.ShinyLock = true; shinyBox.Unchecked += (s, e) => row.ShinyLock = false; shinyStack.Children.Add(shinyBox); miscGrid.Children.Add(shinyStack); Grid.SetColumn(shinyStack, 3);
                 container.Children.Add(new TextBlock { Text = "Details", FontSize = 12, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Margin = new Microsoft.UI.Xaml.Thickness(0, 8, 0, 0) });
                 container.Children.Add(miscGrid);
@@ -273,10 +304,10 @@ namespace HGEngineGUI.Pages
                 var adv = new StackPanel { Spacing = 6 };
                 var advGrid1 = new Grid { ColumnSpacing = 8 };
                 for (int i = 0; i < 4; i++) advGrid1.ColumnDefinitions.Add(new ColumnDefinition());
-                var advAbilityStack = new StackPanel(); advAbilityStack.Children.Add(new TextBlock { Text = "Ability (macro)", FontSize = 12 }); var advAbilityBox = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.AbilityMacros, SelectedItem = row.Ability }; advAbilityBox.SelectionChanged += (s, e) => row.Ability = (advAbilityBox.SelectedItem as string) ?? (advAbilityBox.Text ?? string.Empty); advAbilityBox.LostFocus += (s, e) => row.Ability = advAbilityBox.Text ?? string.Empty; advAbilityStack.Children.Add(advAbilityBox); advGrid1.Children.Add(advAbilityStack); Grid.SetColumn(advAbilityStack, 0);
-                var ballsealStack = new StackPanel(); ballsealStack.Children.Add(new TextBlock { Text = "BallSeal", FontSize = 12 }); var ballsealBox = new TextBox { Text = row.BallSeal.ToString() }; ballsealBox.TextChanging += (s, e) => { if (int.TryParse(ballsealBox.Text, out var v)) row.BallSeal = v; }; ballsealStack.Children.Add(ballsealBox); advGrid1.Children.Add(ballsealStack); Grid.SetColumn(ballsealStack, 1);
-                var typesStack = new StackPanel(); typesStack.Children.Add(new TextBlock { Text = "Types (TYPE_*, TYPE_*)", FontSize = 12 }); var typesBox1 = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.TypeMacros, SelectedItem = row.Type1 }; typesBox1.SelectionChanged += (s, e) => row.Type1 = (typesBox1.SelectedItem as string) ?? (typesBox1.Text ?? string.Empty); typesBox1.LostFocus += (s, e) => row.Type1 = typesBox1.Text ?? string.Empty; typesStack.Children.Add(typesBox1); var typesBox2 = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.TypeMacros, SelectedItem = row.Type2 }; typesBox2.SelectionChanged += (s, e) => row.Type2 = (typesBox2.SelectedItem as string) ?? (typesBox2.Text ?? string.Empty); typesBox2.LostFocus += (s, e) => row.Type2 = typesBox2.Text ?? string.Empty; typesStack.Children.Add(typesBox2); advGrid1.Children.Add(typesStack); Grid.SetColumn(typesStack, 2);
-                var flagsStack = new StackPanel(); flagsStack.Children.Add(new TextBlock { Text = "AdditionalFlags", FontSize = 12 }); var flagsBox = new TextBox { Text = row.AdditionalFlags.ToString() }; flagsBox.TextChanging += (s, e) => { if (int.TryParse(flagsBox.Text, out var v)) row.AdditionalFlags = v; }; flagsStack.Children.Add(flagsBox); advGrid1.Children.Add(flagsStack); Grid.SetColumn(flagsStack, 3);
+                var advAbilityStack = new StackPanel(); advAbilityStack.Children.Add(new TextBlock { Text = "Ability (macro)", FontSize = 12 }); var advAbilityBox = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.AbilityMacros, SelectedItem = row.Ability }; advAbilityBox.ItemTemplate = friendly; advAbilityBox.SelectionChanged += (s, e) => row.Ability = (advAbilityBox.SelectedItem as string) ?? (advAbilityBox.Text ?? string.Empty); advAbilityBox.LostFocus += (s, e) => row.Ability = advAbilityBox.Text ?? string.Empty; advAbilityStack.Children.Add(advAbilityBox); advGrid1.Children.Add(advAbilityStack); Grid.SetColumn(advAbilityStack, 0);
+                var ballsealStack = new StackPanel(); ballsealStack.Children.Add(new TextBlock { Text = "Ball seal", FontSize = 12 }); var ballsealBox = new TextBox { Text = row.BallSeal.ToString() }; ballsealBox.TextChanging += (s, e) => { if (int.TryParse(ballsealBox.Text, out var v)) row.BallSeal = v; }; ballsealStack.Children.Add(ballsealBox); advGrid1.Children.Add(ballsealStack); Grid.SetColumn(ballsealStack, 1);
+                var typesStack = new StackPanel(); typesStack.Children.Add(new TextBlock { Text = "Types", FontSize = 12 }); var typesBox1 = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.TypeMacros, SelectedItem = row.Type1 }; typesBox1.ItemTemplate = friendly; typesBox1.SelectionChanged += (s, e) => row.Type1 = (typesBox1.SelectedItem as string) ?? (typesBox1.Text ?? string.Empty); typesBox1.LostFocus += (s, e) => row.Type1 = typesBox1.Text ?? string.Empty; typesStack.Children.Add(typesBox1); var typesBox2 = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.TypeMacros, SelectedItem = row.Type2 }; typesBox2.ItemTemplate = friendly; typesBox2.SelectionChanged += (s, e) => row.Type2 = (typesBox2.SelectedItem as string) ?? (typesBox2.Text ?? string.Empty); typesBox2.LostFocus += (s, e) => row.Type2 = typesBox2.Text ?? string.Empty; typesStack.Children.Add(typesBox2); advGrid1.Children.Add(typesStack); Grid.SetColumn(typesStack, 2);
+                var flagsStack = new StackPanel(); flagsStack.Children.Add(new TextBlock { Text = "Additional flags", FontSize = 12 }); var flagsBox = new TextBox { Text = row.AdditionalFlags.ToString() }; flagsBox.TextChanging += (s, e) => { if (int.TryParse(flagsBox.Text, out var v)) row.AdditionalFlags = v; }; flagsStack.Children.Add(flagsBox); advGrid1.Children.Add(flagsStack); Grid.SetColumn(flagsStack, 3);
                 adv.Children.Add(advGrid1);
 
                 var advGrid2 = new Grid { ColumnSpacing = 8 };
@@ -286,27 +317,27 @@ namespace HGEngineGUI.Pages
                     var sp = new StackPanel(); sp.Children.Add(new TextBlock { Text = label, FontSize = 12 }); var tb = new TextBox { Text = get().ToString() }; tb.TextChanging += (s, e) => { if (int.TryParse(tb.Text, out var v)) set(v); }; sp.Children.Add(tb); return sp;
                 }
                 var statHp = Stat("HP", () => row.Hp, v => row.Hp = v); advGrid2.Children.Add(statHp); Grid.SetColumn(statHp, 0);
-                var statAtk = Stat("Atk", () => row.Atk, v => row.Atk = v); advGrid2.Children.Add(statAtk); Grid.SetColumn(statAtk, 1);
-                var statDef = Stat("Def", () => row.Def, v => row.Def = v); advGrid2.Children.Add(statDef); Grid.SetColumn(statDef, 2);
-                var statSpe = Stat("Spe", () => row.Speed, v => row.Speed = v); advGrid2.Children.Add(statSpe); Grid.SetColumn(statSpe, 3);
-                var statSpA = Stat("SpAtk", () => row.SpAtk, v => row.SpAtk = v); advGrid2.Children.Add(statSpA); Grid.SetColumn(statSpA, 4);
-                var statSpD = Stat("SpDef", () => row.SpDef, v => row.SpDef = v); advGrid2.Children.Add(statSpD); Grid.SetColumn(statSpD, 5);
+                var statAtk = Stat("Attack", () => row.Atk, v => row.Atk = v); advGrid2.Children.Add(statAtk); Grid.SetColumn(statAtk, 1);
+                var statDef = Stat("Defense", () => row.Def, v => row.Def = v); advGrid2.Children.Add(statDef); Grid.SetColumn(statDef, 2);
+                var statSpe = Stat("Speed", () => row.Speed, v => row.Speed = v); advGrid2.Children.Add(statSpe); Grid.SetColumn(statSpe, 3);
+                var statSpA = Stat("Sp. Atk", () => row.SpAtk, v => row.SpAtk = v); advGrid2.Children.Add(statSpA); Grid.SetColumn(statSpA, 4);
+                var statSpD = Stat("Sp. Def", () => row.SpDef, v => row.SpDef = v); advGrid2.Children.Add(statSpD); Grid.SetColumn(statSpD, 5);
                 adv.Children.Add(advGrid2);
 
                 var advGrid3 = new Grid { ColumnSpacing = 8 };
                 for (int i = 0; i < 3; i++) advGrid3.ColumnDefinitions.Add(new ColumnDefinition());
-                var ivnumsStack = new StackPanel(); ivnumsStack.Children.Add(new TextBlock { Text = "IVNums (6 comma)", FontSize = 12 }); var ivnumsBox = new TextBox { Text = row.IVNums }; ivnumsBox.TextChanging += (s, e) => row.IVNums = ivnumsBox.Text; ivnumsStack.Children.Add(ivnumsBox); advGrid3.Children.Add(ivnumsStack); Grid.SetColumn(ivnumsStack, 0);
-                var evnumsStack = new StackPanel(); evnumsStack.Children.Add(new TextBlock { Text = "EVNums (6 comma)", FontSize = 12 }); var evnumsBox = new TextBox { Text = row.EVNums }; evnumsBox.TextChanging += (s, e) => row.EVNums = evnumsBox.Text; evnumsStack.Children.Add(evnumsBox); advGrid3.Children.Add(evnumsStack); Grid.SetColumn(evnumsStack, 1);
+                var ivnumsStack = new StackPanel(); ivnumsStack.Children.Add(new TextBlock { Text = "IV values (6, comma-separated)", FontSize = 12 }); var ivnumsBox = new TextBox { Text = row.IVNums }; ivnumsBox.TextChanging += (s, e) => row.IVNums = ivnumsBox.Text; ivnumsStack.Children.Add(ivnumsBox); advGrid3.Children.Add(ivnumsStack); Grid.SetColumn(ivnumsStack, 0);
+                var evnumsStack = new StackPanel(); evnumsStack.Children.Add(new TextBlock { Text = "EV values (6, comma-separated)", FontSize = 12 }); var evnumsBox = new TextBox { Text = row.EVNums }; evnumsBox.TextChanging += (s, e) => row.EVNums = evnumsBox.Text; evnumsStack.Children.Add(evnumsBox); advGrid3.Children.Add(evnumsStack); Grid.SetColumn(evnumsStack, 1);
                 var statusStack = new StackPanel(); statusStack.Children.Add(new TextBlock { Text = "Status", FontSize = 12 }); var statusBox = new TextBox { Text = row.Status.ToString() }; statusBox.TextChanging += (s, e) => { if (int.TryParse(statusBox.Text, out var v)) row.Status = v; }; statusStack.Children.Add(statusBox); advGrid3.Children.Add(statusStack); Grid.SetColumn(statusStack, 2);
                 adv.Children.Add(advGrid3);
 
-                var ppCountsStack = new StackPanel(); ppCountsStack.Children.Add(new TextBlock { Text = "PP Counts (4 comma)", FontSize = 12 }); var ppCountsBox = new TextBox { Text = row.PPCounts }; ppCountsBox.TextChanging += (s, e) => row.PPCounts = ppCountsBox.Text; ppCountsStack.Children.Add(ppCountsBox); adv.Children.Add(ppCountsStack);
+                var ppCountsStack = new StackPanel(); ppCountsStack.Children.Add(new TextBlock { Text = "PP counts (4, comma-separated)", FontSize = 12 }); var ppCountsBox = new TextBox { Text = row.PPCounts }; ppCountsBox.TextChanging += (s, e) => row.PPCounts = ppCountsBox.Text; ppCountsStack.Children.Add(ppCountsBox); adv.Children.Add(ppCountsStack);
 
                 // Move PP and Nickname into Advanced section
                 var advGrid4 = new Grid { ColumnSpacing = 8 };
                 advGrid4.ColumnDefinitions.Add(new ColumnDefinition());
                 advGrid4.ColumnDefinitions.Add(new ColumnDefinition());
-                var ppStack = new StackPanel(); ppStack.Children.Add(new TextBlock { Text = "PP (comma-separated)", FontSize = 12 }); var ppBox = new TextBox { Text = row.PP }; ppBox.TextChanging += (s, e) => row.PP = ppBox.Text; ppStack.Children.Add(ppBox); advGrid4.Children.Add(ppStack); Grid.SetColumn(ppStack, 0);
+                var ppStack = new StackPanel(); ppStack.Children.Add(new TextBlock { Text = "Move PP (comma-separated)", FontSize = 12 }); var ppBox = new TextBox { Text = row.PP }; ppBox.TextChanging += (s, e) => row.PP = ppBox.Text; ppStack.Children.Add(ppBox); advGrid4.Children.Add(ppStack); Grid.SetColumn(ppStack, 0);
                 var nickStack = new StackPanel(); nickStack.Children.Add(new TextBlock { Text = "Nickname", FontSize = 12 }); var nickBox = new TextBox { Text = row.Nickname }; nickBox.TextChanging += (s, e) => row.Nickname = nickBox.Text; nickStack.Children.Add(nickBox); advGrid4.Children.Add(nickStack); Grid.SetColumn(nickStack, 1);
                 adv.Children.Add(advGrid4);
 
@@ -424,9 +455,11 @@ namespace HGEngineGUI.Pages
             if (_currentTrainerId < 0) return;
             var cls = ClassCombo.SelectedItem as string ?? string.Empty;
             var ai = AIFlagsBox.Text ?? string.Empty;
-            var bt = (BattleTypeCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "SINGLE_BATTLE";
+            var btMacro = (BattleTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "SINGLE_BATTLE";
             var name = string.IsNullOrWhiteSpace(_currentTrainerName) ? "" : _currentTrainerName;
-            HeaderText.Text = $"{_currentTrainerId}: {name} [{cls}] • mons={_partyRows.Count} • AI={ai} • Type={bt}";
+            var friendlyCls = MacroToDisplayConverter.ToDisplay(cls);
+            var friendlyBt = btMacro == "DOUBLE_BATTLE" ? "Double Battle" : "Single Battle";
+            HeaderText.Text = $"{_currentTrainerId}: {name} [{friendlyCls}] • {friendlyBt} • {(_partyRows.Count == 1 ? "1 Pokémon" : _partyRows.Count + " Pokémon" )}";
         }
 
         
@@ -560,7 +593,7 @@ namespace HGEngineGUI.Pages
             {
                 var cls = ClassCombo.SelectedItem as string ?? "";
                 var ai = AIFlagsBox.Text ?? "";
-                var bt = (BattleTypeCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "SINGLE_BATTLE";
+                var bt = (BattleTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "SINGLE_BATTLE";
                 var items = new List<string>
                 {
                     Item1Combo.SelectedItem as string ?? "ITEM_NONE",
@@ -599,7 +632,7 @@ namespace HGEngineGUI.Pages
             sb.AppendLine($"    item {Item3Combo.SelectedItem as string ?? "ITEM_NONE"}");
             sb.AppendLine($"    item {Item4Combo.SelectedItem as string ?? "ITEM_NONE"}");
             sb.AppendLine($"    aiflags {AIFlagsBox.Text ?? ""}");
-            var bt = (BattleTypeCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "SINGLE_BATTLE";
+            var bt = (BattleTypeCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "SINGLE_BATTLE";
             sb.AppendLine($"    battletype {bt}");
             sb.Append("    endentry\n\n");
 
@@ -751,8 +784,78 @@ namespace HGEngineGUI.Pages
         private async Task LoadUpdatedAsync()
         {
             await Data.HGParsers.RefreshTrainersAsync();
-            _all = Data.HGParsers.Trainers.Select(t => $"{t.Id}: {t.Name} [{t.Class}] mons={t.NumMons} AI={t.AIFlags} Type={t.BattleType} Items={string.Join(",", t.Items)}").ToList();
+            _all = Data.HGParsers.Trainers
+                .Select(t => $"{t.Id}: {t.Name} [{MacroToDisplayConverter.ToDisplay(t.Class)}]")
+                .ToList();
             ApplyFilter();
+        }
+
+        private async void OnExportSpreadsheet(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+        {
+            if (ProjectContext.RootPath == null)
+            {
+                var dlg = new ContentDialog { Title = "No project selected", Content = "Open Project and select your HG Engine folder first.", CloseButtonText = "OK", XamlRoot = this.XamlRoot };
+                await dlg.ShowAsync();
+                return;
+            }
+            Services.ExternalTools.Refresh();
+            if (!Services.ExternalTools.HasRnbEditor || !Services.ExternalTools.HasPython)
+            {
+                var dlg = new ContentDialog { Title = "Exporter not available", Content = "Install rnbstyle-hge-editor under Tools/ and Python 3.10+.", CloseButtonText = "OK", XamlRoot = this.XamlRoot };
+                await dlg.ShowAsync();
+                return;
+            }
+
+            // Paths
+            var trainersPath = Path.Combine(ProjectContext.RootPath, "armips", "data", "trainers", "trainers.s");
+            if (!File.Exists(trainersPath))
+            {
+                var dlg = new ContentDialog { Title = "Missing trainers.s", Content = trainersPath, CloseButtonText = "OK", XamlRoot = this.XamlRoot };
+                await dlg.ShowAsync();
+                return;
+            }
+
+            // Choose output file
+            var picker = new Windows.Storage.Pickers.FileSavePicker();
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+            picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+            picker.FileTypeChoices.Add("Excel Workbook", new List<string> { ".xlsx" });
+            picker.SuggestedFileName = $"trainers_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+            var targetXlsx = await picker.PickSaveFileAsync();
+            if (targetXlsx == null) return;
+
+            // Temp CSV path beside xlsx in same dir
+            var targetFolder = Path.GetDirectoryName(targetXlsx.Path)!;
+            var tempCsv = Path.Combine(targetFolder, $"trainers_{DateTime.Now:yyyyMMdd_HHmm}.csv");
+
+            // Run python exporter to CSV using resolved tool root
+            var editorRoot = Services.ExternalTools.ResolvedRnbEditorRoot;
+            var tocsv = Path.Combine(editorRoot, "tocsv.py");
+            string args = $"\"{tocsv}\" \"{trainersPath}\" -o \"{tempCsv}\"";
+            var result = await Services.ExternalTools.RunPythonAsync(args, editorRoot);
+            if (result.ExitCode != 0 || !File.Exists(tempCsv))
+            {
+                var dlg = new ContentDialog { Title = "CSV export failed", Content = string.IsNullOrWhiteSpace(result.StdErr) ? result.StdOut : result.StdErr, CloseButtonText = "OK", XamlRoot = this.XamlRoot };
+                await dlg.ShowAsync();
+                return;
+            }
+
+            // Convert CSV->XLSX using a minimal embedded approach: write CSV content into .xlsx as plain CSV fallback
+            // For now, store the CSV next to requested .xlsx if conversion is not available
+            try
+            {
+                // Attempt simple rename if .xlsx chosen but conversion not implemented yet
+                // Keep CSV and notify user
+                await Windows.Storage.FileIO.WriteTextAsync(targetXlsx, await File.ReadAllTextAsync(tempCsv));
+                var dlg = new ContentDialog { Title = "Export complete", Content = $"Saved CSV content into {targetXlsx.Name}. A CSV file was also saved next to it.", CloseButtonText = "OK", XamlRoot = this.XamlRoot };
+                await dlg.ShowAsync();
+            }
+            catch (Exception ex)
+            {
+                var dlg = new ContentDialog { Title = "XLSX conversion failed", Content = ex.Message + "\nCSV saved at: " + tempCsv, CloseButtonText = "OK", XamlRoot = this.XamlRoot };
+                await dlg.ShowAsync();
+            }
         }
     }
 }

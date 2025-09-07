@@ -26,6 +26,9 @@
                     <AppBarButton Icon="PreviewLink" Label="Preview" Click="OnPreview"/>
                     <AppBarButton Icon="Save" Label="Save" Click="OnSave"/>
                     <AppBarButton Icon="OpenFile" Label="Open encounters.s" Click="OnOpenFile"/>
+                    <AppBarSeparator/>
+                    <AppBarButton Icon="Download" Label="Export JSON" Click="OnExportJson"/>
+                    <AppBarButton Icon="Document" Label="Export CSV" Click="OnExportCsv"/>
                 </CommandBar>
 
                 <Grid ColumnSpacing="8">

@@ -8,10 +8,17 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                 xmlns:local="using:HGEngineGUI.Pages"
                 xmlns:data="using:HGEngineGUI.Data"
+                xmlns:conv="using:HGEngineGUI.Converters"
     mc:Ignorable="d">
     <Page.KeyboardAccelerators>
         <KeyboardAccelerator Key="S" Modifiers="Control" Invoked="OnCtrlS"/>
     </Page.KeyboardAccelerators>
+    <Page.Resources>
+        <conv:MacroToDisplayConverter x:Key="MacroToDisplay"/>
+        <DataTemplate x:Key="MacroItemTemplate" x:DataType="x:String">
+            <TextBlock Text="{Binding Converter={StaticResource MacroToDisplay}}"/>
+        </DataTemplate>
+    </Page.Resources>
     <Grid Padding="16" RowDefinitions="Auto,*">
         <StackPanel Orientation="Horizontal" Spacing="12">
             <Image x:Name="Icon" Width="64" Height="64"/>
@@ -30,15 +37,15 @@
                             <AppBarButton Icon="Save" Label="Save" Click="OnSaveOverview"/>
                             <AppBarButton Icon="Page" Label="Preview" Click="OnPreviewOverview"/>
                         </CommandBar>
-                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
                             <TextBlock Text="Types" Grid.Row="0"/>
-                            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <ComboBox x:Name="Type1Box" ItemsSource="{x:Bind data:HGParsers.TypeMacros, Mode=OneTime}" Width="180" IsEditable = "true"/>
-                                <ComboBox x:Name="Type2Box" ItemsSource="{x:Bind data:HGParsers.TypeMacros, Mode=OneTime}" Width="180" IsEditable = "true"/>
+                            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,0">
+                                <ComboBox x:Name="Type1Box" Width="180"/>
+                                <ComboBox x:Name="Type2Box" Width="180"/>
                             </StackPanel>
 
                             <TextBlock Text="Base Stats" Grid.Row="1"/>
-                            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="0,0,0,0">
                                 <TextBox x:Name="HpBox" Header="HP" Width="80"/>
                                 <TextBox x:Name="AtkBox" Header="Atk" Width="80"/>
                                 <TextBox x:Name="DefBox" Header="Def" Width="80"/>
@@ -48,7 +55,7 @@
                             </StackPanel>
 
                             <TextBlock Text="EV Yields" Grid.Row="2"/>
-                            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="0,0,0,0">
                                 <TextBox x:Name="EvHpBox" Header="HP" Width="80"/>
                                 <TextBox x:Name="EvAtkBox" Header="Atk" Width="80"/>
                                 <TextBox x:Name="EvDefBox" Header="Def" Width="80"/>
@@ -58,27 +65,42 @@
                             </StackPanel>
 
                             <TextBlock Text="Abilities" Grid.Row="3"/>
-                            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <ComboBox x:Name="Ability1Box" Width="220" IsEditable = "true"/>
-                                <ComboBox x:Name="Ability2Box" Width="220" IsEditable = "true"/>
+                            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,0">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <AutoSuggestBox x:Name="Ability1Box" Width="240" TextChanged="OnAbilityTextChanged" SuggestionChosen="OnAbilitySuggestionChosen"/>
+                                    <Button Click="OnAbility1Dropdown" Width="32" Height="32">
+                                        <FontIcon Glyph="&#xE70D;"/>
+                                    </Button>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <AutoSuggestBox x:Name="Ability2Box" Width="240" TextChanged="OnAbilityTextChanged" SuggestionChosen="OnAbilitySuggestionChosen"/>
+                                    <Button Click="OnAbility2Dropdown" Width="32" Height="32">
+                                        <FontIcon Glyph="&#xE70D;"/>
+                                    </Button>
+                                </StackPanel>
                             </StackPanel>
                             <TextBlock Text="Hidden Ability" Grid.Row="4"/>
-                            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <ComboBox x:Name="AbilityHiddenBox" Width="220" IsEditable = "true"/>
+                            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,0">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <AutoSuggestBox x:Name="AbilityHiddenBox" Width="240" TextChanged="OnAbilityTextChanged" SuggestionChosen="OnAbilitySuggestionChosen"/>
+                                    <Button Click="OnAbilityHiddenDropdown" Width="32" Height="32">
+                                        <FontIcon Glyph="&#xE70D;"/>
+                                    </Button>
+                                </StackPanel>
                                 <Button x:Name="PreviewHiddenAbilityBtn" Content="Preview" Click="OnPreviewHiddenAbility"/>
                             </StackPanel>
 
                             <TextBlock Text="Egg Groups" Grid.Row="5"/>
-                            <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <ComboBox x:Name="Egg1Box" ItemsSource="{x:Bind data:HGParsers.EggGroupMacros, Mode=OneTime}" Width="220" IsEditable = "true"/>
-                                <ComboBox x:Name="Egg2Box" ItemsSource="{x:Bind data:HGParsers.EggGroupMacros, Mode=OneTime}" Width="220" IsEditable = "true"/>
+                            <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,0">
+                                <ComboBox x:Name="Egg1Box" Width="220"/>
+                                <ComboBox x:Name="Egg2Box" Width="220"/>
                             </StackPanel>
 
                             <TextBlock Text="Growth Rate" Grid.Row="6"/>
-                            <ComboBox x:Name="GrowthBox" Grid.Row="6" Grid.Column="1" ItemsSource="{x:Bind data:HGParsers.GrowthRateMacros, Mode=OneTime}" Width="220" IsEditable = "true"/>
+                            <ComboBox x:Name="GrowthBox" Grid.Row="6" Grid.Column="1" Width="220" Margin="0,0,0,0"/>
 
                             <TextBlock Text="Gender/Catch/BaseExp/Egg cycles/Friendship" Grid.Row="7"/>
-                            <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                            <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Spacing="6" Margin="0,0,0,0">
                                 <TextBox x:Name="GenderBox" Header="GenderRatio" Width="120"/>
                                 <TextBox x:Name="CatchBox" Header="CatchRate" Width="120"/>
                                 <TextBox x:Name="BaseExpBox" Header="BaseExp" Width="120"/>
@@ -87,19 +109,29 @@
                             </StackPanel>
 
                             <TextBlock Text="Held Items" Grid.Row="8"/>
-                            <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <ComboBox x:Name="Item1Box" ItemsSource="{x:Bind data:HGParsers.ItemMacros, Mode=OneTime}" Width="220" IsEditable = "true"/>
-                                <ComboBox x:Name="Item2Box" ItemsSource="{x:Bind data:HGParsers.ItemMacros, Mode=OneTime}" Width="220" IsEditable = "true"/>
+                            <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,0">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <AutoSuggestBox x:Name="Item1Box" Width="240" TextChanged="OnItemTextChanged" SuggestionChosen="OnItemSuggestionChosen"/>
+                                    <Button Click="OnItem1Dropdown" Width="32" Height="32">
+                                        <FontIcon Glyph="&#xE70D;"/>
+                                    </Button>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <AutoSuggestBox x:Name="Item2Box" Width="240" TextChanged="OnItemTextChanged" SuggestionChosen="OnItemSuggestionChosen"/>
+                                    <Button Click="OnItem2Dropdown" Width="32" Height="32">
+                                        <FontIcon Glyph="&#xE70D;"/>
+                                    </Button>
+                                </StackPanel>
                             </StackPanel>
 
                             <TextBlock Text="Run Chance" Grid.Row="9"/>
-                            <TextBox x:Name="RunChanceBox" Grid.Row="9" Grid.Column="1" PlaceholderText="0" Width="180"/>
+                            <TextBox x:Name="RunChanceBox" Grid.Row="9" Grid.Column="1" PlaceholderText="0" Width="180" Margin="0,0,0,0"/>
 
                             <TextBlock Text="Dex Classification" Grid.Row="10"/>
-                            <TextBox x:Name="DexClassBox" Grid.Row="10" Grid.Column="1" PlaceholderText="Seed Pokémon"/>
+                            <TextBox x:Name="DexClassBox" Grid.Row="10" Grid.Column="1" PlaceholderText="Seed Pokémon" Width="500" TextWrapping="Wrap" HorizontalAlignment="Left"/>
 
                             <TextBlock Text="Dex Entry" Grid.Row="11"/>
-                            <TextBox x:Name="DexEntryBox" Grid.Row="11" Grid.Column="1" AcceptsReturn="True" TextWrapping="Wrap" Height="96"/>
+                            <TextBox x:Name="DexEntryBox" Grid.Row="11" Grid.Column="1" AcceptsReturn="True" TextWrapping="Wrap" Height="120" Width="900" HorizontalAlignment="Left"/>
 
                             <TextBlock Text="Dex Height" Grid.Row="12"/>
                             <TextBox x:Name="DexHeightBox" Grid.Row="12" Grid.Column="1" PlaceholderText="3’03”" Width="180"/>

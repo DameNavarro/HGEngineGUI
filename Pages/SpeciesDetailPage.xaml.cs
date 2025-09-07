@@ -26,16 +26,111 @@ namespace HGEngineGUI.Pages
         private List<string> _tmhmAll = new();
         private HashSet<string> _tmhmSelected = new();
         private List<string> _tmhmView = new();
+        private List<string> _tmhmViewDisplay = new();
+        private System.Collections.Generic.Dictionary<string, string> _tmhmHeaderToDisplay = new(System.StringComparer.Ordinal);
+        private System.Collections.Generic.Dictionary<string, string> _tmhmDisplayToHeader = new(System.StringComparer.OrdinalIgnoreCase);
         private List<(string method, int param, string target, int form)> _evolutions = new();
         private List<EvolutionEntry> _evoModel = new();
         private HashSet<string> _tutorSelected = new();
         private List<(string tutor, string move, int cost)> _tutorAll = new();
         private List<(string tutor, string move, int cost)> _tutorView = new();
         private List<string> _tutorViewDisplay = new();
+        private List<string> _abilityIndex = new();
+        private List<string> _moveIndex = new();
+        private Dictionary<string, string> _tutorHeaderToDisplay = new(StringComparer.Ordinal);
+        private Dictionary<string, string> _tutorDisplayToHeader = new(StringComparer.OrdinalIgnoreCase);
+        private List<string> _itemIndex = new();
 
         public SpeciesDetailPage()
         {
             InitializeComponent();
+        }
+
+        private static string FormatDisplay(string macro)
+        {
+            try
+            {
+                string s = macro ?? string.Empty;
+                string[] prefixes = new[] { "SPECIES_", "TYPE_", "ABILITY_", "EGG_GROUP_", "GROWTH_", "ITEM_", "EVO_", "MAP_", "TUTOR_" };
+                foreach (var p in prefixes)
+                {
+                    if (s.StartsWith(p, StringComparison.Ordinal)) { s = s.Substring(p.Length); break; }
+                }
+                s = s.Replace('_', ' ');
+                return System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(s.ToLowerInvariant());
+            }
+            catch { return macro; }
+        }
+
+        private string MapAbilityToMacro(string display)
+        {
+            if (string.IsNullOrWhiteSpace(display)) return "ABILITY_NONE";
+            var match = _abilityIndex.FirstOrDefault(a => string.Equals(FormatDisplay(a), display.Trim(), StringComparison.OrdinalIgnoreCase));
+            return string.IsNullOrEmpty(match) ? "ABILITY_NONE" : match;
+        }
+
+        private string MapItemToMacro(string display)
+        {
+            if (string.IsNullOrWhiteSpace(display)) return "ITEM_NONE";
+            var match = _itemIndex.FirstOrDefault(i => string.Equals(FormatDisplay(i), display.Trim(), StringComparison.OrdinalIgnoreCase));
+            return string.IsNullOrEmpty(match) ? "ITEM_NONE" : match;
+        }
+
+        private static string FormatMove(string moveMacro)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(moveMacro)) return moveMacro;
+                var s = moveMacro.StartsWith("MOVE_", StringComparison.Ordinal) ? moveMacro.Substring(5) : moveMacro;
+                s = s.Replace('_', ' ');
+                return System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(s.ToLowerInvariant());
+            }
+            catch { return moveMacro; }
+        }
+
+        private string MapMoveDisplayToMacro(string display)
+        {
+            if (string.IsNullOrWhiteSpace(display)) return string.Empty;
+            var match = _moveIndex.FirstOrDefault(m => string.Equals(FormatMove(m), display.Trim(), StringComparison.OrdinalIgnoreCase));
+            return string.IsNullOrEmpty(match) ? display : match;
+        }
+
+        private string MapSpeciesDisplayToMacro(string display)
+        {
+            if (string.IsNullOrWhiteSpace(display)) return string.Empty;
+            var list = Data.HGParsers.SpeciesMacroNames;
+            var match = list.FirstOrDefault(m => string.Equals(FormatDisplay(m), display.Trim(), StringComparison.OrdinalIgnoreCase));
+            return string.IsNullOrEmpty(match) ? display : match;
+        }
+
+        private string MapTypeDisplayToMacro(string display)
+        {
+            if (string.IsNullOrWhiteSpace(display)) return string.Empty;
+            var list = Data.HGParsers.TypeMacros;
+            var match = list.FirstOrDefault(m => string.Equals(FormatDisplay(m), display.Trim(), StringComparison.OrdinalIgnoreCase));
+            return string.IsNullOrEmpty(match) ? display : match;
+        }
+
+        private string MapEvoMethodDisplayToMacro(string display)
+        {
+            if (string.IsNullOrWhiteSpace(display)) return string.Empty;
+            var list = Data.HGParsers.EvolutionMethodMacros;
+            var match = list.FirstOrDefault(m => string.Equals(FormatDisplay(m), display.Trim(), StringComparison.OrdinalIgnoreCase));
+            return string.IsNullOrEmpty(match) ? display : match;
+        }
+
+        private static string DisplayTmHeader(string header)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(header)) return header;
+                int idx = header.IndexOf("MOVE_", StringComparison.Ordinal);
+                if (idx < 0) return header;
+                string prefix = header.Substring(0, idx).TrimEnd();
+                string moveMacro = header.Substring(idx).Trim();
+                return ($"{prefix} {FormatMove(moveMacro)}").Trim();
+            }
+            catch { return header; }
         }
 
         private void OnLevelUpListLoaded(object sender, RoutedEventArgs e) { }
@@ -49,16 +144,54 @@ namespace HGEngineGUI.Pages
                 var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Padding = new Thickness(8) };
                 var levelBox = new TextBox { Header = "Level", Width = 120, Text = row.Level.ToString() };
                 levelBox.TextChanging += (tb, args) => { if (int.TryParse(levelBox.Text, out var lv)) row.Level = lv; };
-                var moveCombo = new ComboBox { Width = 320, IsEditable = true, PlaceholderText = "MOVE_*" };
-                moveCombo.ItemsSource = Data.HGParsers.MoveMacros;
-                if (!string.IsNullOrWhiteSpace(row.Move) && Data.HGParsers.MoveMacros.Contains(row.Move)) moveCombo.SelectedItem = row.Move;
-                moveCombo.Text = row.Move;
-                moveCombo.SelectionChanged += (s, e) => { row.Move = (moveCombo.SelectedItem as string) ?? (moveCombo.Text ?? string.Empty); };
-                moveCombo.LostFocus += (s, e) => { row.Move = moveCombo.Text ?? string.Empty; };
+
+                // Friendly-name hybrid suggestion for moves
+                var moveBox = new AutoSuggestBox { Width = 260, Height = 36, PlaceholderText = "Move" };
+                moveBox.Text = FormatMove(row.Move);
+                moveBox.TextChanged += (sender, args) =>
+                {
+                    try
+                    {
+                        if (!args.Reason.Equals(AutoSuggestionBoxTextChangeReason.UserInput)) return;
+                        var q = (moveBox.Text ?? string.Empty).Trim();
+                        IEnumerable<string> pool = _moveIndex;
+                        if (!string.IsNullOrEmpty(q))
+                        {
+                            pool = _moveIndex.Where(m => FormatMove(m).Contains(q, StringComparison.OrdinalIgnoreCase) || m.Contains(q, StringComparison.OrdinalIgnoreCase));
+                        }
+                        moveBox.ItemsSource = pool.Select(FormatMove).ToList();
+                    }
+                    catch { }
+                };
+                moveBox.SuggestionChosen += (sender, args) =>
+                {
+                    try
+                    {
+                        var display = args.SelectedItem as string ?? moveBox.Text;
+                        var macro = MapMoveDisplayToMacro(display);
+                        row.Move = macro;
+                        moveBox.Text = FormatMove(macro);
+                    }
+                    catch { }
+                };
+                moveBox.LostFocus += (sender, args) =>
+                {
+                    try { var macro = MapMoveDisplayToMacro(moveBox.Text); row.Move = macro; moveBox.Text = FormatMove(macro); } catch { }
+                };
+                var dropdown = new Button { Width = 32, Height = 32 };
+                dropdown.Content = new FontIcon { Glyph = "\uE70D" };
+                dropdown.Click += (s, e) =>
+                {
+                    try { moveBox.ItemsSource = _moveIndex.Select(FormatMove).ToList(); moveBox.IsSuggestionListOpen = true; } catch { }
+                };
+
                 var remove = new Button { Content = "Remove" };
                 remove.Click += (s, e) => { _levelUpModel.Remove(row); RenderLevelUpStack(); };
                 panel.Children.Add(levelBox);
-                panel.Children.Add(moveCombo);
+                var movePanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+                movePanel.Children.Add(moveBox);
+                movePanel.Children.Add(dropdown);
+                panel.Children.Add(movePanel);
                 panel.Children.Add(remove);
                 LevelUpStack.Children.Add(panel);
             }
@@ -93,11 +226,13 @@ namespace HGEngineGUI.Pages
                     IsEditable = true,
                     Header = "Method"
                 };
-                methodCombo.ItemsSource = Data.HGParsers.EvolutionMethodMacros;
-                if (Data.HGParsers.EvolutionMethodMacros.Contains(row.Method)) methodCombo.SelectedItem = row.Method;
-                methodCombo.Text = row.Method;
-                methodCombo.SelectionChanged += (s, e) => { row.Method = (methodCombo.SelectedItem as string) ?? (methodCombo.Text ?? string.Empty); };
-                methodCombo.LostFocus += (s, e) => { row.Method = methodCombo.Text ?? string.Empty; };
+                var evoMethodsDisplay = Data.HGParsers.EvolutionMethodMacros.Select(FormatDisplay).ToList();
+                methodCombo.ItemsSource = evoMethodsDisplay;
+                var curMethodDisp = FormatDisplay(row.Method);
+                if (evoMethodsDisplay.Contains(curMethodDisp)) methodCombo.SelectedItem = curMethodDisp;
+                methodCombo.Text = curMethodDisp;
+                methodCombo.SelectionChanged += (s, e) => { row.Method = MapEvoMethodDisplayToMacro((methodCombo.SelectedItem as string) ?? (methodCombo.Text ?? string.Empty)); };
+                methodCombo.LostFocus += (s, e) => { row.Method = MapEvoMethodDisplayToMacro(methodCombo.Text ?? string.Empty); };
 
                 var paramBox = new TextBox
                 {
@@ -116,11 +251,13 @@ namespace HGEngineGUI.Pages
                     IsEditable = true,
                     Header = "Target"
                 };
-                targetCombo.ItemsSource = Data.HGParsers.SpeciesMacroNames;
-                if (Data.HGParsers.SpeciesMacroNames.Contains(row.Target)) targetCombo.SelectedItem = row.Target;
-                targetCombo.Text = row.Target;
-                targetCombo.SelectionChanged += (s, e) => { row.Target = (targetCombo.SelectedItem as string) ?? (targetCombo.Text ?? string.Empty); };
-                targetCombo.LostFocus += (s, e) => { row.Target = targetCombo.Text ?? string.Empty; };
+                var speciesDisplay = Data.HGParsers.SpeciesMacroNames.Select(FormatDisplay).ToList();
+                targetCombo.ItemsSource = speciesDisplay;
+                var curTargetDisp = FormatDisplay(row.Target);
+                if (speciesDisplay.Contains(curTargetDisp)) targetCombo.SelectedItem = curTargetDisp;
+                targetCombo.Text = curTargetDisp;
+                targetCombo.SelectionChanged += (s, e) => { row.Target = MapSpeciesDisplayToMacro((targetCombo.SelectedItem as string) ?? (targetCombo.Text ?? string.Empty)); };
+                targetCombo.LostFocus += (s, e) => { row.Target = MapSpeciesDisplayToMacro(targetCombo.Text ?? string.Empty); };
 
                 var formBox = new TextBox
                 {
@@ -156,11 +293,13 @@ namespace HGEngineGUI.Pages
                     {
                         var line = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
                         var methodC = new ComboBox { Width = 220, IsEditable = true };
-                        methodC.ItemsSource = Data.HGParsers.EvolutionMethodMacros;
-                        if (!string.IsNullOrWhiteSpace(cond.Method) && Data.HGParsers.EvolutionMethodMacros.Contains(cond.Method)) methodC.SelectedItem = cond.Method;
-                        methodC.Text = cond.Method;
-                        methodC.SelectionChanged += (s, e) => { cond.Method = (methodC.SelectedItem as string) ?? (methodC.Text ?? string.Empty); };
-                        methodC.LostFocus += (s, e) => { cond.Method = methodC.Text ?? string.Empty; };
+                        var methodsDisp = Data.HGParsers.EvolutionMethodMacros.Select(FormatDisplay).ToList();
+                        methodC.ItemsSource = methodsDisp;
+                        var curDisp = FormatDisplay(cond.Method);
+                        if (!string.IsNullOrWhiteSpace(cond.Method) && methodsDisp.Contains(curDisp)) methodC.SelectedItem = curDisp;
+                        methodC.Text = curDisp;
+                        methodC.SelectionChanged += (s, e) => { cond.Method = MapEvoMethodDisplayToMacro((methodC.SelectedItem as string) ?? (methodC.Text ?? string.Empty)); };
+                        methodC.LostFocus += (s, e) => { cond.Method = MapEvoMethodDisplayToMacro(methodC.Text ?? string.Empty); };
 
                         // Dynamic param editor
                         FrameworkElement paramEditor = new TextBox { Width = 140, Header = "Param", Text = cond.Param.ToString() };
@@ -174,8 +313,8 @@ namespace HGEngineGUI.Pages
                                 var cb = new ComboBox { Width = 240, Header = "Item" };
                                 var items = Data.HGParsers.ItemMacros.ToList();
                                 items.Sort(StringComparer.Ordinal);
-                                cb.ItemsSource = items;
-                                cb.SelectionChanged += (s, e) => { var macro = cb.SelectedItem as string; if (!string.IsNullOrEmpty(macro) && Data.HGParsers.TryGetItemValue(macro, out var id)) cond.Param = id; };
+                                cb.ItemsSource = items.Select(FormatDisplay).ToList();
+                                cb.SelectionChanged += (s, e) => { var disp = cb.SelectedItem as string; var macro = Data.HGParsers.ItemMacros.FirstOrDefault(im => string.Equals(FormatDisplay(im), disp, StringComparison.OrdinalIgnoreCase)) ?? disp; if (!string.IsNullOrEmpty(macro) && Data.HGParsers.TryGetItemValue(macro, out var id)) cond.Param = id; };
                                 editor = cb;
                             }
                             else if (m == "EVO_HAS_MOVE")
@@ -183,8 +322,8 @@ namespace HGEngineGUI.Pages
                                 var cb = new ComboBox { Width = 260, Header = "Move" };
                                 var moves = Data.HGParsers.MoveMacros.ToList();
                                 moves.Sort(StringComparer.Ordinal);
-                                cb.ItemsSource = moves;
-                                cb.SelectionChanged += (s, e) => { var macro = cb.SelectedItem as string; if (!string.IsNullOrEmpty(macro) && Data.HGParsers.TryGetMoveValue(macro, out var id)) cond.Param = id; };
+                                cb.ItemsSource = moves.Select(FormatMove).ToList();
+                                cb.SelectionChanged += (s, e) => { var disp = cb.SelectedItem as string; var macro = MapMoveDisplayToMacro(disp ?? string.Empty); if (!string.IsNullOrEmpty(macro) && Data.HGParsers.TryGetMoveValue(macro, out var id)) cond.Param = id; };
                                 editor = cb;
                             }
                             else if (m == "EVO_HAS_MOVE_TYPE")
@@ -192,8 +331,8 @@ namespace HGEngineGUI.Pages
                                 var cb = new ComboBox { Width = 220, Header = "Type" };
                                 var types = Data.HGParsers.TypeMacros.ToList();
                                 types.Sort(StringComparer.Ordinal);
-                                cb.ItemsSource = types;
-                                cb.SelectionChanged += (s, e) => { var macro = cb.SelectedItem as string; if (!string.IsNullOrEmpty(macro) && Data.HGParsers.TryGetTypeValue(macro, out var id)) cond.Param = id; };
+                                cb.ItemsSource = types.Select(FormatDisplay).ToList();
+                                cb.SelectionChanged += (s, e) => { var disp = cb.SelectedItem as string; var macro = Data.HGParsers.TypeMacros.FirstOrDefault(tm => string.Equals(FormatDisplay(tm), disp, StringComparison.OrdinalIgnoreCase)) ?? disp; if (!string.IsNullOrEmpty(macro) && Data.HGParsers.TryGetTypeValue(macro, out var id)) cond.Param = id; };
                                 editor = cb;
                             }
                             else if (m == "EVO_OTHER_PARTY_MON" || m == "EVO_TRADE_SPECIFIC_MON")
@@ -201,8 +340,8 @@ namespace HGEngineGUI.Pages
                                 var cb = new ComboBox { Width = 300, Header = "Species" };
                                 var species = Data.HGParsers.SpeciesMacroNames.ToList();
                                 species.Sort(StringComparer.Ordinal);
-                                cb.ItemsSource = species;
-                                cb.SelectionChanged += (s, e) => { var macro = cb.SelectedItem as string; if (!string.IsNullOrEmpty(macro) && Data.HGParsers.TryGetSpeciesValue(macro, out var id)) cond.Param = id; };
+                                cb.ItemsSource = species.Select(FormatDisplay).ToList();
+                                cb.SelectionChanged += (s, e) => { var disp = cb.SelectedItem as string; var macro = Data.HGParsers.SpeciesMacroNames.FirstOrDefault(sm => string.Equals(FormatDisplay(sm), disp, StringComparison.OrdinalIgnoreCase)) ?? disp; if (!string.IsNullOrEmpty(macro) && Data.HGParsers.TryGetSpeciesValue(macro, out var id)) cond.Param = id; };
                                 editor = cb;
                             }
                             else if (m == "EVO_CORONET" || m == "EVO_ETERNA" || m == "EVO_ROUTE217")
@@ -263,7 +402,7 @@ namespace HGEngineGUI.Pages
         private void SyncLevelUpFromUi()
         {
             _levelUpModel = _levelUpModel
-                .Select(m => new LevelUpEntry { Level = m.Level, Move = (m.Move ?? string.Empty).Trim() })
+                .Select(m => new LevelUpEntry { Level = m.Level, Move = MapMoveDisplayToMacro((m.Move ?? string.Empty).Trim()) })
                 .OrderBy(m => m.Level)
                 .ToList();
         }
@@ -271,7 +410,7 @@ namespace HGEngineGUI.Pages
         private void SyncEggFromUi()
         {
             _eggModel = _eggModel
-                .Select(m => new EggMoveEntry { Move = (m.Move ?? string.Empty).Trim() })
+                .Select(m => new EggMoveEntry { Move = MapMoveDisplayToMacro((m.Move ?? string.Empty).Trim()) })
                 .Where(m => !string.IsNullOrWhiteSpace(m.Move))
                 .ToList();
         }
@@ -293,17 +432,52 @@ namespace HGEngineGUI.Pages
             foreach (var row in _eggModel)
             {
                 var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Padding = new Thickness(8) };
-                var moveCombo = new ComboBox { Width = 320, IsEditable = true, PlaceholderText = "MOVE_*" };
-                moveCombo.ItemsSource = Data.HGParsers.MoveMacros;
-                if (!string.IsNullOrWhiteSpace(row.Move) && Data.HGParsers.MoveMacros.Contains(row.Move)) moveCombo.SelectedItem = row.Move;
-                moveCombo.Text = row.Move;
-                moveCombo.SelectionChanged += (s, e) => { row.Move = (moveCombo.SelectedItem as string) ?? (moveCombo.Text ?? string.Empty); };
-                moveCombo.LostFocus += (s, e) => { row.Move = moveCombo.Text ?? string.Empty; };
+                var moveBox = new AutoSuggestBox { Width = 260, Height = 36, PlaceholderText = "Move" };
+                moveBox.Text = FormatMove(row.Move);
+                moveBox.TextChanged += (sender, args) =>
+                {
+                    try
+                    {
+                        if (!args.Reason.Equals(AutoSuggestionBoxTextChangeReason.UserInput)) return;
+                        var q = (moveBox.Text ?? string.Empty).Trim();
+                        IEnumerable<string> pool = _moveIndex;
+                        if (!string.IsNullOrEmpty(q))
+                        {
+                            pool = _moveIndex.Where(m => FormatMove(m).Contains(q, StringComparison.OrdinalIgnoreCase) || m.Contains(q, StringComparison.OrdinalIgnoreCase));
+                        }
+                        moveBox.ItemsSource = pool.Select(FormatMove).ToList();
+                    }
+                    catch { }
+                };
+                moveBox.SuggestionChosen += (sender, args) =>
+                {
+                    try
+                    {
+                        var display = args.SelectedItem as string ?? moveBox.Text;
+                        var macro = MapMoveDisplayToMacro(display);
+                        row.Move = macro;
+                        moveBox.Text = FormatMove(macro);
+                    }
+                    catch { }
+                };
+                moveBox.LostFocus += (sender, args) =>
+                {
+                    try { var macro = MapMoveDisplayToMacro(moveBox.Text); row.Move = macro; moveBox.Text = FormatMove(macro); } catch { }
+                };
+                var dropdown = new Button { Width = 32, Height = 32 };
+                dropdown.Content = new FontIcon { Glyph = "\uE70D" };
+                dropdown.Click += (s, e) =>
+                {
+                    try { moveBox.ItemsSource = _moveIndex.Select(FormatMove).ToList(); moveBox.IsSuggestionListOpen = true; } catch { }
+                };
 
                 var remove = new Button { Content = "Remove" };
                 remove.Click += (s, e) => { _eggModel.Remove(row); RenderEggStack(); };
 
-                panel.Children.Add(moveCombo);
+                var movePanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+                movePanel.Children.Add(moveBox);
+                movePanel.Children.Add(dropdown);
+                panel.Children.Add(movePanel);
                 panel.Children.Add(remove);
                 EggStack.Children.Add(panel);
             }
@@ -355,7 +529,7 @@ namespace HGEngineGUI.Pages
             _species = e.Parameter as SpeciesEntry;
             if (_species == null) return;
 
-            Title.Text = _species.Name;
+            Title.Text = FormatDisplay(_species.Name);
             Subtitle.Text = $"ID: {_species.Id}";
             try
             {
@@ -375,20 +549,22 @@ namespace HGEngineGUI.Pages
             // Populate static resources at runtime so templates have data before they render
             // no-op
             // Bind dropdown sources explicitly so they are populated even if page loaded before caches
-            Type1Box.ItemsSource = Data.HGParsers.TypeMacros;
-            Type2Box.ItemsSource = Data.HGParsers.TypeMacros;
+            Type1Box.ItemsSource = Data.HGParsers.TypeMacros.Select(FormatDisplay).ToList();
+            Type2Box.ItemsSource = Data.HGParsers.TypeMacros.Select(FormatDisplay).ToList();
             var abilityList = Data.HGParsers.AbilityMacros.ToList();
             abilityList.Sort(StringComparer.Ordinal);
-            Ability1Box.ItemsSource = abilityList;
-            Ability2Box.ItemsSource = abilityList;
-            AbilityHiddenBox.ItemsSource = abilityList;
-            Egg1Box.ItemsSource = Data.HGParsers.EggGroupMacros;
-            Egg2Box.ItemsSource = Data.HGParsers.EggGroupMacros;
-            GrowthBox.ItemsSource = Data.HGParsers.GrowthRateMacros;
-            Item1Box.ItemsSource = Data.HGParsers.ItemMacros;
-            Item2Box.ItemsSource = Data.HGParsers.ItemMacros;
+            _abilityIndex = abilityList;
+            Egg1Box.ItemsSource = Data.HGParsers.EggGroupMacros.Select(FormatDisplay).ToList();
+            Egg2Box.ItemsSource = Data.HGParsers.EggGroupMacros.Select(FormatDisplay).ToList();
+            GrowthBox.ItemsSource = Data.HGParsers.GrowthRateMacros.Select(FormatDisplay).ToList();
+            Item1Box.ItemsSource = Data.HGParsers.ItemMacros.Select(FormatDisplay).ToList();
+            Item2Box.ItemsSource = Data.HGParsers.ItemMacros.Select(FormatDisplay).ToList();
+            var itemsList = Data.HGParsers.ItemMacros.ToList();
+            itemsList.Sort(StringComparer.Ordinal);
+            _itemIndex = itemsList;
             // Snapshot move list for summaries/editors
             MoveOptions = Data.HGParsers.MoveMacros.ToList();
+            _moveIndex = MoveOptions.ToList();
             _levelUp = Data.HGParsers.LevelUpMoves.ToList();
             _levelUpModel = _levelUp.Select(m => new LevelUpEntry { Level = m.level, Move = m.move }).ToList();
             RenderLevelUpStack();
@@ -409,32 +585,69 @@ namespace HGEngineGUI.Pages
             _tutorSelected = new HashSet<string>(Data.HGParsers.TutorSelectedForSpecies);
             _tutorAll = Data.HGParsers.TutorHeaders.ToList();
             _tutorView = _tutorAll.ToList();
-            _tutorViewDisplay = _tutorView.Select(t => $"{t.tutor}: {t.move} {t.cost}").ToList();
+            _tutorHeaderToDisplay.Clear();
+            _tutorDisplayToHeader.Clear();
+            _tutorViewDisplay = _tutorView
+                .Select(t =>
+                {
+                    var disp = $"{FormatDisplay(t.tutor)}: {FormatMove(t.move)} {t.cost}";
+                    var header = $"{t.tutor}: {t.move} {t.cost}";
+                    _tutorHeaderToDisplay[header] = disp;
+                    if (!_tutorDisplayToHeader.ContainsKey(disp)) _tutorDisplayToHeader[disp] = header;
+                    return disp;
+                })
+                .ToList();
             TutorList.ItemsSource = _tutorViewDisplay;
             TutorList.SelectedItems.Clear();
+            // Preselect using display strings converted from backend selection set
+            var selectedDisplay = Data.HGParsers.TmHmSelectedForSpecies
+                .Select(h =>
+                {
+                    // h format: TUTOR_X: MOVE_MACRO cost
+                    var parts = h.Split(':');
+                    var tutor = parts[0].Trim();
+                    var rest = parts.Length > 1 ? parts[1].Trim() : string.Empty;
+                    var tokens = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    var move = tokens.Length > 0 ? tokens[0].Trim() : string.Empty;
+                    var cost = tokens.Length > 1 ? tokens[^1] : "0";
+                    return $"{FormatDisplay(tutor)}: {FormatMove(move)} {cost}";
+                }).ToHashSet(StringComparer.Ordinal);
             foreach (var header in _tutorView)
             {
-                var key = $"{header.tutor}: {header.move} {header.cost}";
-                if (_tutorSelected.Contains(key)) TutorList.SelectedItems.Add(key);
+                var disp = $"{FormatDisplay(header.tutor)}: {FormatMove(header.move)} {header.cost}";
+                if (selectedDisplay.Contains(disp)) TutorList.SelectedItems.Add(disp);
             }
 
-            // TM/HM list: show all TM labels; then filter via search if needed
+            // TM/HM list: show friendly labels but keep header mapping
             _tmhmAll = Data.HGParsers.TmHmMoves.ToList();
+            _tmhmHeaderToDisplay.Clear();
+            _tmhmDisplayToHeader.Clear();
+            foreach (var h in _tmhmAll)
+            {
+                var d = DisplayTmHeader(h);
+                _tmhmHeaderToDisplay[h] = d;
+                if (!_tmhmDisplayToHeader.ContainsKey(d)) _tmhmDisplayToHeader[d] = h;
+            }
             _tmhmView = _tmhmAll.ToList();
-            TmHmList.ItemsSource = _tmhmView;
-            // Preselect those that contain this species
+            _tmhmViewDisplay = _tmhmView.Select(h => _tmhmHeaderToDisplay.TryGetValue(h, out var d) ? d : h).ToList();
+            TmHmList.ItemsSource = _tmhmViewDisplay;
+            // Preselect those that contain this species (map to display)
             var selected = Data.HGParsers.TmHmSelectedForSpecies;
             TmHmList.SelectedItems.Clear();
             foreach (var hdr in _tmhmView)
             {
-                if (selected.Contains(hdr)) TmHmList.SelectedItems.Add(hdr);
+                if (selected.Contains(hdr))
+                {
+                    var disp = _tmhmHeaderToDisplay.TryGetValue(hdr, out var dd) ? dd : hdr;
+                    TmHmList.SelectedItems.Add(disp);
+                }
             }
 
             var ov = Data.HGParsers.Overview;
             if (ov != null)
             {
-                Type1Box.SelectedItem = ov.Type1;
-                Type2Box.SelectedItem = ov.Type2;
+                Type1Box.SelectedItem = FormatDisplay(ov.Type1);
+                Type2Box.SelectedItem = FormatDisplay(ov.Type2);
                 HpBox.Text = ov.BaseHp.ToString();
                 AtkBox.Text = ov.BaseAttack.ToString();
                 DefBox.Text = ov.BaseDefense.ToString();
@@ -447,19 +660,19 @@ namespace HGEngineGUI.Pages
                 EvSpABox.Text = ov.EvYields.spatk.ToString();
                 EvSpDBox.Text = ov.EvYields.spdef.ToString();
                 EvSpeBox.Text = ov.EvYields.spd.ToString();
-                Ability1Box.SelectedItem = ov.Ability1;
-                Ability2Box.SelectedItem = ov.Ability2;
-                AbilityHiddenBox.SelectedItem = ov.AbilityHidden;
-                Egg1Box.SelectedItem = ov.EggGroup1;
-                Egg2Box.SelectedItem = ov.EggGroup2;
-                GrowthBox.SelectedItem = ov.GrowthRate;
+                Ability1Box.Text = FormatDisplay(ov.Ability1);
+                Ability2Box.Text = FormatDisplay(ov.Ability2);
+                AbilityHiddenBox.Text = FormatDisplay(ov.AbilityHidden);
+                Egg1Box.SelectedItem = FormatDisplay(ov.EggGroup1);
+                Egg2Box.SelectedItem = FormatDisplay(ov.EggGroup2);
+                GrowthBox.SelectedItem = FormatDisplay(ov.GrowthRate);
                 GenderBox.Text = ov.GenderRatio.ToString();
                 CatchBox.Text = ov.CatchRate.ToString();
                 BaseExpBox.Text = ov.BaseExp.ToString();
                 EggCyclesBox.Text = ov.EggCycles.ToString();
                 FriendBox.Text = ov.BaseFriendship.ToString();
-                Item1Box.SelectedItem = ov.Item1;
-                Item2Box.SelectedItem = ov.Item2;
+                Item1Box.Text = FormatDisplay(ov.Item1);
+                Item2Box.Text = FormatDisplay(ov.Item2);
                 RunChanceBox.Text = ov.RunChance.ToString();
                 DexClassBox.Text = ov.DexClassification ?? string.Empty;
                 DexEntryBox.Text = ov.DexEntry ?? string.Empty;
@@ -471,7 +684,7 @@ namespace HGEngineGUI.Pages
         // Level-up editing (simple; move names must be exact macros)
         private async void OnAddLevelUp(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
-            var movePicker = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.MoveMacros, PlaceholderText = "MOVE_*" };
+            var movePicker = new ComboBox { IsEditable = true, ItemsSource = _moveIndex.Select(FormatMove).ToList(), PlaceholderText = "Move" };
             var levelBox = new TextBox { Header = "Level" };
             var dialog = new ContentDialog
             {
@@ -484,7 +697,7 @@ namespace HGEngineGUI.Pages
             var result = await dialog.ShowAsync();
             if (result == ContentDialogResult.Primary)
             {
-                var move = (movePicker.Text ?? string.Empty).Trim();
+                var move = MapMoveDisplayToMacro((movePicker.Text ?? string.Empty).Trim());
                 var levelStr = (levelBox.Text ?? string.Empty).Trim();
                 if (int.TryParse(levelStr, out var lvl) && !string.IsNullOrEmpty(move))
                 {
@@ -529,7 +742,7 @@ namespace HGEngineGUI.Pages
         // Egg moves
         private async void OnAddEggMove(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
-            var eggPicker = new ComboBox { IsEditable = true, ItemsSource = Data.HGParsers.MoveMacros, PlaceholderText = "MOVE_*" };
+            var eggPicker = new ComboBox { IsEditable = true, ItemsSource = _moveIndex.Select(FormatMove).ToList(), PlaceholderText = "Move" };
             var dialog = new ContentDialog
             {
                 Title = "Add Egg Move",
@@ -541,7 +754,7 @@ namespace HGEngineGUI.Pages
             var result = await dialog.ShowAsync();
             if (result == ContentDialogResult.Primary)
             {
-                var text = (eggPicker.Text ?? string.Empty).Trim();
+                var text = MapMoveDisplayToMacro((eggPicker.Text ?? string.Empty).Trim());
                 if (!string.IsNullOrWhiteSpace(text))
                 {
                     _eggModel.Add(new EggMoveEntry { Move = text });
@@ -653,7 +866,8 @@ namespace HGEngineGUI.Pages
         private async void OnSaveTmHm(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
         {
             if (_species == null) return;
-            var selected = TmHmList.SelectedItems.Cast<string>().ToList();
+            var selectedDisplay = TmHmList.SelectedItems.Cast<string>().ToList();
+            var selected = selectedDisplay.Select(d => _tmhmDisplayToHeader.TryGetValue(d, out var h) ? h : d).ToList();
             var path = Data.HGParsers.PathTm ?? Path.Combine(ProjectContext.RootPath ?? string.Empty, "armips", "data", "tmlearnset.txt");
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) { try { StatusText.Text = $"File not found: tmlearnset.txt"; } catch { } return; }
             await Data.HGSerializers.SaveTmHmForSpeciesAsync(_species.Name, selected);
@@ -675,8 +889,9 @@ namespace HGEngineGUI.Pages
                 .Cast<string>()
                 .Select(s =>
                 {
-                    // format is "TUTOR_X: MOVE_Y cost"
-                    var parts = s.Split(':');
+                    // display format is "Tutor_X: Move cost"; map back to header first
+                    var header = _tutorDisplayToHeader.TryGetValue(s, out var h) ? h : s;
+                    var parts = header.Split(':');
                     var tutor = parts[0].Trim();
                     var rest = parts.Length > 1 ? parts[1].Trim() : string.Empty;
                     var moveAndCost = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -699,7 +914,8 @@ namespace HGEngineGUI.Pages
                 .Cast<string>()
                 .Select(s =>
                 {
-                    var parts = s.Split(':');
+                    var header = _tutorDisplayToHeader.TryGetValue(s, out var h) ? h : s;
+                    var parts = header.Split(':');
                     var tutor = parts[0].Trim();
                     var rest = parts.Length > 1 ? parts[1].Trim() : string.Empty;
                     var moveAndCost = rest.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -723,7 +939,7 @@ namespace HGEngineGUI.Pages
             // Persist Base Exp to data/BaseExperienceTable.c
             await Data.HGSerializers.SaveBaseExpAsync(_species.Name, ov.BaseExp);
             // Also persist Hidden Ability via HiddenAbilityTable.c
-            var hidden = (AbilityHiddenBox.SelectedItem as string) ?? ov.AbilityHidden;
+            var hidden = MapAbilityToMacro(AbilityHiddenBox.Text);
             if (!string.IsNullOrWhiteSpace(hidden))
             {
                 await Data.HGSerializers.SaveHiddenAbilityAsync(_species.Name, hidden);
@@ -742,16 +958,16 @@ namespace HGEngineGUI.Pages
         private async void OnSaveHiddenAbility(object sender, RoutedEventArgs e)
         {
             if (_species == null) return;
-            var ability = (AbilityHiddenBox.SelectedItem as string) ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(ability)) return;
+            var ability = MapAbilityToMacro(AbilityHiddenBox.Text);
+            if (string.IsNullOrWhiteSpace(ability) || ability == "ABILITY_NONE") return;
             await Data.HGSerializers.SaveHiddenAbilityAsync(_species.Name, ability);
         }
 
         private async void OnPreviewHiddenAbility(object sender, RoutedEventArgs e)
         {
             if (_species == null) return;
-            var ability = (AbilityHiddenBox.SelectedItem as string) ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(ability)) return;
+            var ability = MapAbilityToMacro(AbilityHiddenBox.Text);
+            if (string.IsNullOrWhiteSpace(ability) || ability == "ABILITY_NONE") return;
             var diff = await Data.HGSerializers.PreviewHiddenAbilityAsync(_species.Name, ability);
             await ShowDiffDialog(diff, "HiddenAbilityTable.c");
         }
@@ -774,9 +990,9 @@ namespace HGEngineGUI.Pages
             int.TryParse(EvSpABox.Text, out v); var esatk = v;
             int.TryParse(EvSpDBox.Text, out v); var essd = v;
             ov.EvYields = (ehp, eatk, edef, espd, esatk, essd);
-            ov.Ability1 = (Ability1Box.SelectedItem as string) ?? "ABILITY_NONE";
-            ov.Ability2 = (Ability2Box.SelectedItem as string) ?? "ABILITY_NONE";
-            ov.AbilityHidden = (AbilityHiddenBox.SelectedItem as string) ?? "ABILITY_NONE";
+            ov.Ability1 = MapAbilityToMacro(Ability1Box.Text);
+            ov.Ability2 = MapAbilityToMacro(Ability2Box.Text);
+            ov.AbilityHidden = MapAbilityToMacro(AbilityHiddenBox.Text);
             ov.EggGroup1 = (Egg1Box.SelectedItem as string) ?? "EGG_GROUP_NONE";
             ov.EggGroup2 = (Egg2Box.SelectedItem as string) ?? "EGG_GROUP_NONE";
             ov.GrowthRate = (GrowthBox.SelectedItem as string) ?? "GROWTH_MEDIUM_FAST";
@@ -785,8 +1001,8 @@ namespace HGEngineGUI.Pages
             int.TryParse(BaseExpBox.Text, out v); ov.BaseExp = v;
             int.TryParse(EggCyclesBox.Text, out v); ov.EggCycles = v;
             int.TryParse(FriendBox.Text, out v); ov.BaseFriendship = v;
-            ov.Item1 = (Item1Box.SelectedItem as string) ?? "ITEM_NONE";
-            ov.Item2 = (Item2Box.SelectedItem as string) ?? "ITEM_NONE";
+            ov.Item1 = MapItemToMacro(Item1Box.Text);
+            ov.Item2 = MapItemToMacro(Item2Box.Text);
             int.TryParse(RunChanceBox.Text, out v); ov.RunChance = v;
             ov.DexClassification = DexClassBox.Text ?? string.Empty;
             ov.DexEntry = DexEntryBox.Text ?? string.Empty;
@@ -815,6 +1031,93 @@ namespace HGEngineGUI.Pages
             };
             await dlg.ShowAsync();
         }
+
+        // Ability autosuggest handlers
+        private void OnAbilityTextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+        {
+            try
+            {
+                if (!args.Reason.Equals(AutoSuggestionBoxTextChangeReason.UserInput)) return;
+                var query = (sender.Text ?? string.Empty).Trim();
+                var list = string.IsNullOrEmpty(query)
+                    ? _abilityIndex
+                    : _abilityIndex.Where(a => a.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+                sender.ItemsSource = list.Select(FormatDisplay).ToList();
+            }
+            catch { }
+        }
+
+        private void OnAbilitySuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
+        {
+            try
+            {
+                var display = args.SelectedItem as string ?? sender.Text;
+                // Map back to macro by reverse formatting
+                string macro = _abilityIndex.FirstOrDefault(a => string.Equals(FormatDisplay(a), display, StringComparison.OrdinalIgnoreCase))
+                                ?? _abilityIndex.FirstOrDefault(a => a.Contains(display, StringComparison.OrdinalIgnoreCase))
+                                ?? display;
+                sender.Text = FormatDisplay(macro);
+            }
+            catch { }
+        }
+
+        private void OpenAbilityDropdown(AutoSuggestBox box)
+        {
+            try
+            {
+                if (box == null) return;
+                // Ensure full list shown
+                box.ItemsSource = _abilityIndex.Select(FormatDisplay).ToList();
+                box.IsSuggestionListOpen = true;
+            }
+            catch { }
+        }
+
+        private void OnAbility1Dropdown(object sender, RoutedEventArgs e) => OpenAbilityDropdown(Ability1Box);
+        private void OnAbility2Dropdown(object sender, RoutedEventArgs e) => OpenAbilityDropdown(Ability2Box);
+        private void OnAbilityHiddenDropdown(object sender, RoutedEventArgs e) => OpenAbilityDropdown(AbilityHiddenBox);
+
+        // Item autosuggest handlers
+        private void OnItemTextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+        {
+            try
+            {
+                if (!args.Reason.Equals(AutoSuggestionBoxTextChangeReason.UserInput)) return;
+                var query = (sender.Text ?? string.Empty).Trim();
+                var list = string.IsNullOrEmpty(query)
+                    ? _itemIndex
+                    : _itemIndex.Where(i => i.Contains(query, StringComparison.OrdinalIgnoreCase) || FormatDisplay(i).Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+                sender.ItemsSource = list.Select(FormatDisplay).ToList();
+            }
+            catch { }
+        }
+
+        private void OnItemSuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
+        {
+            try
+            {
+                var display = args.SelectedItem as string ?? sender.Text;
+                string macro = _itemIndex.FirstOrDefault(a => string.Equals(FormatDisplay(a), display, StringComparison.OrdinalIgnoreCase))
+                                ?? _itemIndex.FirstOrDefault(a => a.Contains(display, StringComparison.OrdinalIgnoreCase))
+                                ?? display;
+                sender.Text = FormatDisplay(macro);
+            }
+            catch { }
+        }
+
+        private void OpenItemDropdown(AutoSuggestBox box)
+        {
+            try
+            {
+                if (box == null) return;
+                box.ItemsSource = _itemIndex.Select(FormatDisplay).ToList();
+                box.IsSuggestionListOpen = true;
+            }
+            catch { }
+        }
+
+        private void OnItem1Dropdown(object sender, RoutedEventArgs e) => OpenItemDropdown(Item1Box);
+        private void OnItem2Dropdown(object sender, RoutedEventArgs e) => OpenItemDropdown(Item2Box);
 
         // Keyboard shortcuts
         private void OnCtrlS(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
@@ -1012,7 +1315,7 @@ namespace HGEngineGUI.Pages
             for (int i = 0; i < entries.Count; i++)
             {
                 var (level, move) = entries[i];
-                if (level < 1 || level > 100) errors.Add($"Row {i + 1}: Level must be 1-100.");
+                if (level < 0 || level > 100) errors.Add($"Row {i + 1}: Level must be 0-100.");
                 if (string.IsNullOrWhiteSpace(move) || !moveSet.Contains(move)) errors.Add($"Row {i + 1}: Move macro not found.");
             }
             return errors;
@@ -1083,15 +1386,18 @@ namespace HGEngineGUI.Pages
         private void OnTmSearch(object sender, AutoSuggestBoxTextChangedEventArgs e)
         {
             var q = (TmSearch.Text ?? string.Empty).Trim();
-            _tmhmView = string.IsNullOrEmpty(q) ? _tmhmAll.ToList() : _tmhmAll.Where(x => x.Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
-            TmHmList.ItemsSource = _tmhmView;
+            _tmhmView = string.IsNullOrEmpty(q)
+                ? _tmhmAll.ToList()
+                : _tmhmAll.Where(x => (_tmhmHeaderToDisplay.TryGetValue(x, out var d) ? d : x).Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+            _tmhmViewDisplay = _tmhmView.Select(h => _tmhmHeaderToDisplay.TryGetValue(h, out var d) ? d : h).ToList();
+            TmHmList.ItemsSource = _tmhmViewDisplay;
         }
 
         private void OnTutorSearch(object sender, AutoSuggestBoxTextChangedEventArgs e)
         {
             var q = (TutorSearch.Text ?? string.Empty).Trim();
-            _tutorView = string.IsNullOrEmpty(q) ? _tutorAll.ToList() : _tutorAll.Where(x => ($"{x.tutor} {x.move} {x.cost}").Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
-            _tutorViewDisplay = _tutorView.Select(t => $"{t.tutor}: {t.move} {t.cost}").ToList();
+            _tutorView = string.IsNullOrEmpty(q) ? _tutorAll.ToList() : _tutorAll.Where(x => ($"{FormatDisplay(x.tutor)} {FormatMove(x.move)} {x.cost}").Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+            _tutorViewDisplay = _tutorView.Select(t => $"{FormatDisplay(t.tutor)}: {FormatMove(t.move)} {t.cost}").ToList();
             TutorList.ItemsSource = _tutorViewDisplay;
         }
     }

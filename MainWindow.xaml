@@ -9,25 +9,77 @@
     mc:Ignorable="d"
     Title="HG Engine Tool">
 
+    <!-- Mica Alt -->
     <Window.SystemBackdrop>
-        <MicaBackdrop />
+        <MicaBackdrop Kind="BaseAlt"/>
     </Window.SystemBackdrop>
 
-    <NavigationView x:Name="RootNavView"
-                    IsBackEnabled="False"
-                    IsBackButtonVisible="Auto"
-                    IsSettingsVisible="False"
-                    PaneDisplayMode="Top"
-                    SelectionChanged="OnNavigationSelectionChanged">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Custom Title Bar (drag region) -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Height="32" Padding="12,0,12,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Image Width="16" Height="16" Source="ms-appx:///Assets/Icons/Project-200.png"/>
+                <TextBlock Text="HG Engine Tool" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <NavigationView x:Name="RootNavView" Grid.Row="1"
+                        IsBackEnabled="False"
+                        IsBackButtonVisible="Auto"
+                        IsSettingsVisible="False"
+                        PaneDisplayMode="Top"
+                        SelectionChanged="OnNavigationSelectionChanged">
         <NavigationView.MenuItems>
-            <NavigationViewItem x:Name="StartItem" Content="Project" Tag="Start" Icon="Folder" IsSelected="True"/>
-            <NavigationViewItem x:Name="PokemonItem" Content="Pokémon" Tag="Species" Icon="Contact"/>
-            <NavigationViewItem x:Name="TrainersItem" Content="Trainers" Tag="Trainers" Icon="People"/>
-            <NavigationViewItem x:Name="ItemsItem" Content="Items" Tag="Items" Icon="Shop"/>
-            <NavigationViewItem x:Name="MovesItem" Content="Moves" Tag="Moves" Icon="Edit"/>
-            <NavigationViewItem x:Name="TmHmItem" Content="TM/HM editor" Tag="TMHM" Icon="Library"/>
-            <NavigationViewItem x:Name="ConfigItem" Content="Config" Tag="Config" Icon="Setting"/>
-            <NavigationViewItem x:Name="EncountersItem" Content="Encounters" Tag="Encounters" Icon="Map"/>
+            <NavigationViewItem x:Name="StartItem" Content="Project" Tag="Start" IsSelected="True">
+                <NavigationViewItem.Icon>
+                    <ImageIcon Source="ms-appx:///Assets/Icons/Project-200.png"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem x:Name="PokemonItem" Content="Pokémon" Tag="Species">
+                <NavigationViewItem.Icon>
+                    <ImageIcon Source="ms-appx:///Assets/Icons/Pokemon-200.png"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem x:Name="TrainersItem" Content="Trainers" Tag="Trainers">
+                <NavigationViewItem.Icon>
+                    <ImageIcon Source="ms-appx:///Assets/Icons/Trainers-200.png"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem x:Name="ItemsItem" Content="Items" Tag="Items">
+                <NavigationViewItem.Icon>
+                    <ImageIcon Source="ms-appx:///Assets/Icons/Items-200.png"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem x:Name="MovesItem" Content="Moves" Tag="Moves">
+                <NavigationViewItem.Icon>
+                    <ImageIcon Source="ms-appx:///Assets/Icons/Moves-200.png"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem x:Name="TmHmItem" Content="TM/HM editor" Tag="TMHM">
+                <NavigationViewItem.Icon>
+                    <ImageIcon Source="ms-appx:///Assets/Icons/TM-HM-Editor-200.png"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem x:Name="ConfigItem" Content="Config" Tag="Config">
+                <NavigationViewItem.Icon>
+                    <ImageIcon Source="ms-appx:///Assets/Icons/Config-200.png"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+            <NavigationViewItem x:Name="EncountersItem" Content="Encounters" Tag="Encounters">
+                <NavigationViewItem.Icon>
+                    <ImageIcon Source="ms-appx:///Assets/Icons/Encounters-200.png"/>
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
             <!-- Learnsets and Evolutions will be sub-pages under Pokémon, so we remove their top-level nav items. -->
         </NavigationView.MenuItems>
 
@@ -43,5 +95,6 @@
                 <TextBlock x:Name="StatusTiming" Grid.Column="2" Foreground="LightGray"/>
             </Grid>
         </Grid>
-    </NavigationView>
+        </NavigationView>
+    </Grid>
 </Window>

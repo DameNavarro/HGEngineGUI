@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace HGEngineGUI.Pages
 {
@@ -328,6 +331,137 @@ namespace HGEngineGUI.Pages
                     RenderCurrent();
                 }
             }
+        }
+
+        private async void OnExportJson(object sender, RoutedEventArgs e)
+        {
+            if (_all == null || _all.Count == 0)
+            {
+                var dlg = new ContentDialog { Title = "No Data", Content = "No encounter data available to export.", PrimaryButtonText = "OK", XamlRoot = this.XamlRoot };
+                await dlg.ShowAsync();
+                return;
+            }
+
+            try
+            {
+                var picker = new Windows.Storage.Pickers.FileSavePicker();
+                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
+                WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+                picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+                picker.FileTypeChoices.Add("JSON Files", new List<string> { ".json" });
+                picker.SuggestedFileName = "encounter_data.json";
+                var file = await picker.PickSaveFileAsync();
+                if (file == null) return;
+
+                var options = new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.Never };
+                var json = JsonSerializer.Serialize(_all, options);
+                await Windows.Storage.FileIO.WriteTextAsync(file, json);
+
+                var ok = new ContentDialog { Title = "Export Complete", Content = $"Exported to {file.Name}", PrimaryButtonText = "OK", XamlRoot = this.XamlRoot };
+                await ok.ShowAsync();
+            }
+            catch (Exception ex)
+            {
+                var err = new ContentDialog { Title = "Export Failed", Content = ex.Message, PrimaryButtonText = "OK", XamlRoot = this.XamlRoot };
+                await err.ShowAsync();
+            }
+        }
+
+        private async void OnExportCsv(object sender, RoutedEventArgs e)
+        {
+            if (_all == null || _all.Count == 0)
+            {
+                var dlg = new ContentDialog { Title = "No Data", Content = "No encounter data available to export.", PrimaryButtonText = "OK", XamlRoot = this.XamlRoot };
+                await dlg.ShowAsync();
+                return;
+            }
+
+            try
+            {
+                var picker = new Windows.Storage.Pickers.FileSavePicker();
+                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
+                WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+                picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+                picker.FileTypeChoices.Add("CSV Files", new List<string> { ".csv" });
+                picker.SuggestedFileName = "encounter_data.csv";
+                var file = await picker.PickSaveFileAsync();
+                if (file == null) return;
+
+                var csv = GenerateCsv(_all);
+                await Windows.Storage.FileIO.WriteTextAsync(file, csv);
+
+                var ok = new ContentDialog { Title = "Export Complete", Content = $"Exported to {file.Name}", PrimaryButtonText = "OK", XamlRoot = this.XamlRoot };
+                await ok.ShowAsync();
+            }
+            catch (Exception ex)
+            {
+                var err = new ContentDialog { Title = "Export Failed", Content = ex.Message, PrimaryButtonText = "OK", XamlRoot = this.XamlRoot };
+                await err.ShowAsync();
+            }
+        }
+
+        private static string GenerateCsv(List<Data.HGParsers.EncounterArea> areas)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("Area ID,Area Label,Encounter Type,Species,Min Level,Max Level,Probability");
+            foreach (var area in areas)
+            {
+                sb.AppendLine($"{area.Id},\"{CsvEscape(area.Label)}\",Walk Rate,{area.WalkRate},,,");
+                sb.AppendLine($"{area.Id},\"{CsvEscape(area.Label)}\",Surf Rate,{area.SurfRate},,,");
+                sb.AppendLine($"{area.Id},\"{CsvEscape(area.Label)}\",Rock Smash Rate,{area.RockSmashRate},,,");
+                sb.AppendLine($"{area.Id},\"{CsvEscape(area.Label)}\",Old Rod Rate,{area.OldRodRate},,,");
+                sb.AppendLine($"{area.Id},\"{CsvEscape(area.Label)}\",Good Rod Rate,{area.GoodRodRate},,,");
+                sb.AppendLine($"{area.Id},\"{CsvEscape(area.Label)}\",Super Rod Rate,{area.SuperRodRate},,,");
+
+                for (int i = 0; i < area.WalkLevels.Length; i++)
+                {
+                    sb.AppendLine($"{area.Id},\"{CsvEscape(area.Label)}\",Walk Level {i + 1},,{area.WalkLevels[i]},,");
+                }
+
+                ExportSpecies(sb, area, "Morning Grass", area.MorningGrass, area.GrassProbabilities);
+                ExportSpecies(sb, area, "Day Grass", area.DayGrass, area.GrassProbabilities);
+                ExportSpecies(sb, area, "Night Grass", area.NightGrass, area.GrassProbabilities);
+                ExportSpecies(sb, area, "Hoenn Grass", area.HoennGrass, null);
+                ExportSpecies(sb, area, "Sinnoh Grass", area.SinnohGrass, null);
+
+                ExportSlots(sb, area, "Surf", area.Surf, area.SurfProbabilities);
+                ExportSlots(sb, area, "Rock Smash", area.RockSmash, area.RockProbabilities);
+                ExportSlots(sb, area, "Old Rod", area.OldRod, area.OldRodProbabilities);
+                ExportSlots(sb, area, "Good Rod", area.GoodRod, area.GoodRodProbabilities);
+                ExportSlots(sb, area, "Super Rod", area.SuperRod, area.SuperRodProbabilities);
+
+                if (!string.IsNullOrEmpty(area.SwarmGrass)) sb.AppendLine($"{area.Id},\"{CsvEscape(area.Label)}\",Swarm Grass,{area.SwarmGrass},,,");
+                if (!string.IsNullOrEmpty(area.SwarmSurf)) sb.AppendLine($"{area.Id},\"{CsvEscape(area.Label)}\",Swarm Surf,{area.SwarmSurf},,,");
+                if (!string.IsNullOrEmpty(area.SwarmGoodRod)) sb.AppendLine($"{area.Id},\"{CsvEscape(area.Label)}\",Swarm Good Rod,{area.SwarmGoodRod},,,");
+                if (!string.IsNullOrEmpty(area.SwarmSuperRod)) sb.AppendLine($"{area.Id},\"{CsvEscape(area.Label)}\",Swarm Super Rod,{area.SwarmSuperRod},,,");
+            }
+            return sb.ToString();
+        }
+
+        private static void ExportSpecies(StringBuilder sb, Data.HGParsers.EncounterArea area, string kind, List<string> list, int[]? probs)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                var p = probs != null && i < probs.Length ? probs[i].ToString() : string.Empty;
+                sb.AppendLine($"{area.Id},\"{CsvEscape(area.Label)}\",{kind},{list[i]},,,{p}");
+            }
+        }
+
+        private static void ExportSlots(StringBuilder sb, Data.HGParsers.EncounterArea area, string kind, List<Data.HGParsers.EncounterSlot> list, int[] probs)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                var slot = list[i];
+                var p = i < probs.Length ? probs[i].ToString() : string.Empty;
+                sb.AppendLine($"{area.Id},\"{CsvEscape(area.Label)}\",{kind},{slot.SpeciesMacro},{slot.MinLevel},{slot.MaxLevel},{p}");
+            }
+        }
+
+        private static string CsvEscape(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return string.Empty;
+            if (s.Contains(",") || s.Contains("\"") || s.Contains("\n")) return "\"" + s.Replace("\"", "\"\"") + "\"";
+            return s;
         }
     }
 }
